@@ -7,6 +7,7 @@
 
 import Foundation
 import Supabase
+import Combine
 
 @MainActor
 class SupabaseManager: ObservableObject {
@@ -19,14 +20,14 @@ class SupabaseManager: ObservableObject {
     
     private init() {
         // MARK: - Configuration
-        // TODO: Replace with your actual Supabase credentials
-        // Store these securely (Keychain or xcconfig, never hardcode in production)
-        let supabaseURL = URL(string: "https://ikihabdfvjicjuatpjvd.supabase.co")!
-        let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlraWhhYmRmdmppY2p1YXRwanZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MTk1OTcsImV4cCI6MjA4Mzk5NTU5N30.2oN6Za7kYF9MmhH7mvAlHIXRe9NDWLv4ynSExT5G0Uw"
+        // Credentials are stored in Config.swift
+        guard let supabaseURL = URL(string: Config.supabaseURL) else {
+            fatalError("Invalid Supabase URL in Config.swift")
+        }
         
         self.client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: Config.supabaseAnonKey
         )
         
         Task {
@@ -53,11 +54,11 @@ class SupabaseManager: ObservableObject {
         var metadata: [String: AnyJSON] = ["name": .string(name)]
         
         if let initialWeight = initialWeight {
-            metadata["initial_weight"] = .number(initialWeight)
+            metadata["initial_weight"] = .double(initialWeight)
         }
         
         if let goalWeight = goalWeight {
-            metadata["goal_weight"] = .number(goalWeight)
+            metadata["goal_weight"] = .double(goalWeight)
         }
         
         let response = try await client.auth.signUp(
@@ -70,9 +71,8 @@ class SupabaseManager: ObservableObject {
         self.isAuthenticated = true
         
         // Create user profile
-        if let userId = response.user?.id {
-            try await createUserProfile(userId: userId, initialWeight: initialWeight, goalWeight: goalWeight)
-        }
+        let userId = response.user.id
+        try await createUserProfile(userId: userId, initialWeight: initialWeight, goalWeight: goalWeight)
     }
     
     func signIn(email: String, password: String) async throws {
@@ -94,11 +94,18 @@ class SupabaseManager: ObservableObject {
     // MARK: - User Profile
     
     private func createUserProfile(userId: UUID, initialWeight: Double?, goalWeight: Double?) async throws {
-        let profile: [String: Any] = [
-            "user_id": userId.uuidString,
-            "current_weight": initialWeight as Any,
-            "goal_weight": goalWeight as Any
-        ]
+        // Create a properly typed struct for the insert
+        struct UserProfileInsert: Encodable {
+            let user_id: String
+            let current_weight: Double?
+            let goal_weight: Double?
+        }
+        
+        let profile = UserProfileInsert(
+            user_id: userId.uuidString,
+            current_weight: initialWeight,
+            goal_weight: goalWeight
+        )
         
         try await client.from("user_profiles")
             .insert(profile)
@@ -121,8 +128,12 @@ class SupabaseManager: ObservableObject {
     func updateGoalWeight(_ goalWeight: Double) async throws {
         guard let userId = currentUser?.id else { return }
         
+        struct GoalWeightUpdate: Encodable {
+            let goal_weight: Double
+        }
+        
         try await client.from("user_profiles")
-            .update(["goal_weight": goalWeight])
+            .update(GoalWeightUpdate(goal_weight: goalWeight))
             .eq("user_id", value: userId.uuidString)
             .execute()
     }
@@ -174,15 +185,24 @@ class SupabaseManager: ObservableObject {
             throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        // Create the exercise
-        let exerciseData: [String: Any] = [
-            "name": name,
-            "muscle_group": muscleGroup.rawValue,
-            "exercise_type": exerciseType.rawValue,
-            "is_base": false,
-            "default_pr_reps": 1,
-            "uses_body_weight": false
-        ]
+        // Create a properly typed struct for the exercise insert
+        struct ExerciseInsert: Encodable {
+            let name: String
+            let muscle_group: String
+            let exercise_type: String
+            let is_base: Bool
+            let default_pr_reps: Int
+            let uses_body_weight: Bool
+        }
+        
+        let exerciseData = ExerciseInsert(
+            name: name,
+            muscle_group: muscleGroup.rawValue,
+            exercise_type: exerciseType.rawValue,
+            is_base: false,
+            default_pr_reps: 1,
+            uses_body_weight: false
+        )
         
         let exercise: Exercise = try await client.from("exercises")
             .insert(exerciseData)
@@ -192,10 +212,15 @@ class SupabaseManager: ObservableObject {
             .value
         
         // Link to user
-        let linkData: [String: Any] = [
-            "user_id": userId.uuidString,
-            "exercise_id": exercise.id.uuidString
-        ]
+        struct UserExerciseLink: Encodable {
+            let user_id: String
+            let exercise_id: String
+        }
+        
+        let linkData = UserExerciseLink(
+            user_id: userId.uuidString,
+            exercise_id: exercise.id.uuidString
+        )
         
         try await client.from("user_exercises")
             .insert(linkData)
@@ -205,8 +230,12 @@ class SupabaseManager: ObservableObject {
     }
     
     func updatePinnedNote(exerciseId: UUID, note: String?) async throws {
+        struct PinnedNoteUpdate: Encodable {
+            let pinned_note: String?
+        }
+        
         try await client.from("exercises")
-            .update(["pinned_note": note as Any])
+            .update(PinnedNoteUpdate(pinned_note: note))
             .eq("id", value: exerciseId.uuidString)
             .execute()
     }
@@ -245,27 +274,28 @@ class SupabaseManager: ObservableObject {
         
         let iso8601Date = ISO8601DateFormatter().string(from: date)
         
-        var setData: [String: Any] = [
-            "exercise_id": exerciseId.uuidString,
-            "user_id": userId.uuidString,
-            "date": iso8601Date
-        ]
+        // Create a properly typed struct for the set insert
+        struct SetInsert: Encodable {
+            let exercise_id: String
+            let user_id: String
+            let date: String
+            let weight: Double?
+            let reps: Int?
+            let distance: Double?
+            let duration: Int?
+            let notes: String?
+        }
         
-        if let weight = weight {
-            setData["weight"] = weight
-        }
-        if let reps = reps {
-            setData["reps"] = reps
-        }
-        if let distance = distance {
-            setData["distance"] = distance
-        }
-        if let duration = duration {
-            setData["duration"] = duration
-        }
-        if let notes = notes, !notes.isEmpty {
-            setData["notes"] = notes
-        }
+        let setData = SetInsert(
+            exercise_id: exerciseId.uuidString,
+            user_id: userId.uuidString,
+            date: iso8601Date,
+            weight: weight,
+            reps: reps,
+            distance: distance,
+            duration: duration,
+            notes: notes?.isEmpty == false ? notes : nil
+        )
         
         try await client.from("sets")
             .insert(setData)
@@ -273,23 +303,22 @@ class SupabaseManager: ObservableObject {
     }
     
     func updateSet(_ setId: UUID, weight: Double? = nil, reps: Int? = nil, distance: Double? = nil, duration: Int? = nil, notes: String? = nil) async throws {
-        var updateData: [String: Any] = [:]
+        // Create a properly typed struct for the set update
+        struct SetUpdate: Encodable {
+            let weight: Double?
+            let reps: Int?
+            let distance: Double?
+            let duration: Int?
+            let notes: String?
+        }
         
-        if let weight = weight {
-            updateData["weight"] = weight
-        }
-        if let reps = reps {
-            updateData["reps"] = reps
-        }
-        if let distance = distance {
-            updateData["distance"] = distance
-        }
-        if let duration = duration {
-            updateData["duration"] = duration
-        }
-        if let notes = notes {
-            updateData["notes"] = notes
-        }
+        let updateData = SetUpdate(
+            weight: weight,
+            reps: reps,
+            distance: distance,
+            duration: duration,
+            notes: notes
+        )
         
         try await client.from("sets")
             .update(updateData)
@@ -324,15 +353,20 @@ class SupabaseManager: ObservableObject {
         
         let iso8601Date = ISO8601DateFormatter().string(from: date)
         
-        var logData: [String: Any] = [
-            "user_id": userId.uuidString,
-            "weight": weight,
-            "date": iso8601Date
-        ]
-        
-        if let notes = notes, !notes.isEmpty {
-            logData["notes"] = notes
+        // Create a properly typed struct for the body weight log insert
+        struct BodyWeightLogInsert: Encodable {
+            let user_id: String
+            let weight: Double
+            let date: String
+            let notes: String?
         }
+        
+        let logData = BodyWeightLogInsert(
+            user_id: userId.uuidString,
+            weight: weight,
+            date: iso8601Date,
+            notes: notes?.isEmpty == false ? notes : nil
+        )
         
         // Insert log
         try await client.from("body_weight_logs")
@@ -340,8 +374,13 @@ class SupabaseManager: ObservableObject {
             .execute()
         
         // Update profile
+        struct ProfileWeightUpdate: Encodable {
+            let current_weight: Double
+            let updated_at: String
+        }
+        
         try await client.from("user_profiles")
-            .update(["current_weight": weight, "updated_at": "now()"])
+            .update(ProfileWeightUpdate(current_weight: weight, updated_at: "now()"))
             .eq("user_id", value: userId.uuidString)
             .execute()
     }

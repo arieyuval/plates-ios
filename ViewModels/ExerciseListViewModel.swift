@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class ExerciseListViewModel: ObservableObject {
@@ -25,7 +26,16 @@ class ExerciseListViewModel: ObservableObject {
         
         // Filter by muscle group
         if selectedMuscleGroup != .all {
-            result = result.filter { $0.muscleGroup == selectedMuscleGroup }
+            if selectedMuscleGroup == .arms {
+                // When Arms is selected, include Arms, Biceps, and Triceps
+                result = result.filter { 
+                    $0.muscleGroup == .arms || 
+                    $0.muscleGroup == .biceps || 
+                    $0.muscleGroup == .triceps 
+                }
+            } else {
+                result = result.filter { $0.muscleGroup == selectedMuscleGroup }
+            }
         }
         
         // Filter by search text

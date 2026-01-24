@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Auth
 
 struct ProfileView: View {
     @EnvironmentObject var supabase: SupabaseManager

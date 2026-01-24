@@ -14,7 +14,7 @@ struct MuscleGroupTabsView: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(MuscleGroup.allCases, id: \.self) { group in
+                ForEach(MuscleGroup.navigationGroups, id: \.self) { group in
                     MuscleGroupTab(
                         group: group,
                         isSelected: selectedGroup == group,

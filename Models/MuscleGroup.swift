@@ -24,6 +24,11 @@ enum MuscleGroup: String, Codable, CaseIterable {
         rawValue
     }
     
+    // Filter for navigation tabs - excludes biceps and triceps
+    static var navigationGroups: [MuscleGroup] {
+        allCases.filter { $0 != .biceps && $0 != .triceps }
+    }
+    
     // MARK: - Color Coding
     
     func lightModeColor() -> Color {

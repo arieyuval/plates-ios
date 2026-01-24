@@ -23,8 +23,8 @@ struct SignUpView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Dark grey background
-                Color.primaryDark
+                // Dark navy background
+                Color.backgroundNavy
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -53,7 +53,8 @@ struct SignUpView: View {
                                 TextField("Name", text: $name)
                                     .textContentType(.name)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                                 
                                 TextField("Email", text: $email)
@@ -61,19 +62,22 @@ struct SignUpView: View {
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                                 
                                 SecureField("Password", text: $password)
                                     .textContentType(.newPassword)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                                 
                                 SecureField("Confirm Password", text: $confirmPassword)
                                     .textContentType(.newPassword)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                             }
                             
@@ -85,13 +89,15 @@ struct SignUpView: View {
                                 TextField("Current Weight (lbs)", text: $initialWeight)
                                     .keyboardType(.decimalPad)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                                 
                                 TextField("Goal Weight (lbs)", text: $goalWeight)
                                     .keyboardType(.decimalPad)
                                     .padding()
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
+                                    .foregroundStyle(.white)
                                     .cornerRadius(10)
                             }
                             
@@ -101,7 +107,7 @@ struct SignUpView: View {
                                     .font(.caption)
                                     .padding()
                                     .frame(maxWidth: .infinity)
-                                    .background(Color.white.opacity(0.9))
+                                    .background(Color.cardDark)
                                     .cornerRadius(10)
                             }
                             

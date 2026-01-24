@@ -14,13 +14,9 @@ struct ExerciseListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    colors: [Color.indigo.opacity(0.1), Color.purple.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Dark navy background
+                Color.backgroundNavy
+                    .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Search bar
@@ -36,11 +32,12 @@ struct ExerciseListView: View {
                     if viewModel.isLoading {
                         Spacer()
                         ProgressView()
+                            .tint(.white)
                         Spacer()
                     } else if viewModel.filteredExercises.isEmpty {
                         Spacer()
                         Text("No exercises found")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                         Spacer()
                     } else {
                         ScrollView {
@@ -64,12 +61,16 @@ struct ExerciseListView: View {
                 }
             }
             .navigationTitle("Exercises")
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         viewModel.showingAddExercise = true
                     } label: {
                         Image(systemName: "plus")
+                            .foregroundStyle(.white)
                     }
                 }
             }

@@ -13,22 +13,24 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.6))
             
             TextField("Search exercises...", text: $text)
                 .textFieldStyle(.plain)
+                .foregroundStyle(.white)
+                .tint(.blue)
             
             if !text.isEmpty {
                 Button {
                     text = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.6))
                 }
             }
         }
         .padding(10)
-        .background(Color(.systemBackground))
+        .background(Color.cardDark)
         .cornerRadius(10)
     }
 }

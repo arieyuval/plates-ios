@@ -18,30 +18,23 @@ struct SignInView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    colors: [Color.indigo.opacity(0.1), Color.purple.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Dark navy background
+                Color.backgroundNavy
+                    .ignoresSafeArea()
                 
                 VStack(spacing: 24) {
                     Spacer()
                     
                     // Logo
-                    VStack(spacing: 8) {
-                        Image(systemName: "dumbbell.fill")
-                            .font(.system(size: 80))
-                            .foregroundStyle(Color.blue)
-                        
-                        Text("Plates")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+                    VStack(spacing: 16) {
+                        Image("plates-logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 200, height: 200)
                         
                         Text("The Lifter's Database")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.8))
                     }
                     .padding(.bottom, 40)
                     
@@ -52,19 +45,25 @@ struct SignInView: View {
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .padding()
-                            .background(Color(.systemBackground))
+                            .background(Color.cardDark)
+                            .foregroundStyle(.white)
                             .cornerRadius(10)
                         
                         SecureField("Password", text: $password)
                             .textContentType(.password)
                             .padding()
-                            .background(Color(.systemBackground))
+                            .background(Color.cardDark)
+                            .foregroundStyle(.white)
                             .cornerRadius(10)
                         
                         if let errorMessage = errorMessage {
                             Text(errorMessage)
                                 .font(.caption)
                                 .foregroundStyle(.red)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.cardDark)
+                                .cornerRadius(10)
                         }
                         
                         Button {
@@ -90,6 +89,7 @@ struct SignInView: View {
                         } label: {
                             Text("Don't have an account? **Sign Up**")
                                 .font(.subheadline)
+                                .foregroundStyle(.white)
                         }
                     }
                     .padding(.horizontal, 32)

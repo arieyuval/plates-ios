@@ -23,99 +23,152 @@ struct ExerciseCardView: View {
         NavigationLink {
             ExerciseDetailView(exercise: exercise)
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 // Header
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(exercise.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
                         
-                        HStack {
-                            Text(exercise.muscleGroup.displayName)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(exercise.muscleGroup.color(for: colorScheme))
-                                .foregroundStyle(.white)
-                                .cornerRadius(4)
-                            
-                            if exercise.pinnedNote != nil {
-                                Image(systemName: "pin.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        // Muscle group badge
+                        Text(exercise.muscleGroup.displayName)
+                            .font(.subheadline)
+                            .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.3))
                 }
                 
-                // Stats
-                HStack(spacing: 16) {
+                // Stats Row
+                HStack(spacing: 12) {
+                    // Last Session
                     if let lastSession = lastSession {
-                        StatView(title: "Last Session", value: lastSession.displayText)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Last Session")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                            Text(lastSession.displayText)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Color.statBoxDark)
+                        .cornerRadius(12)
                     }
                     
+                    // Last Set
                     if let lastSet = lastSet {
-                        StatView(title: "Last Set", value: lastSet.displayText)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Last Set")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                            Text(lastSet.displayText)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Color.statBoxDark)
+                        .cornerRadius(12)
                     }
                     
+                    // PR Box with accent color
                     if let currentPR = currentPR {
-                        StatView(
-                            title: "Current \(exercise.defaultPRReps)RM",
-                            value: "\(Int(currentPR.weight)) lbs"
-                        )
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("\(exercise.defaultPRReps)RM PR")
+                                .font(.caption)
+                                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
+                            Text("\(Int(currentPR.weight)) lbs")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.15))
+                        .cornerRadius(12)
                     }
                 }
                 
                 // Quick log form
                 if exercise.exerciseType == .strength {
-                    HStack(spacing: 8) {
-                        TextField("Weight", text: $weight)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 80)
-                        
-                        Text("×")
-                            .foregroundStyle(.secondary)
-                        
-                        TextField("Reps", text: $reps)
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 60)
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                    
+                    HStack(spacing: 12) {
+                        Text("Quick Log")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.6))
                         
                         Spacer()
                         
+                        TextField("Wt", text: $weight)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white)
+                            .frame(width: 80)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                            .background(Color.statBoxDark)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                        
+                        Text("×")
+                            .foregroundStyle(.white.opacity(0.4))
+                            .font(.title3)
+                        
+                        TextField("Reps", text: $reps)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white)
+                            .frame(width: 80)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
+                            .background(Color.statBoxDark)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            )
+                        
                         if showSuccess {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                                Text("Done")
-                                    .foregroundStyle(.green)
-                                    .font(.subheadline)
-                            }
-                            .transition(.scale.combined(with: .opacity))
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.title2)
+                                .transition(.scale.combined(with: .opacity))
                         } else {
                             Button {
                                 logSet()
                             } label: {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
+                                Image(systemName: "plus")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .frame(width: 50, height: 50)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
                             }
                             .disabled(weight.isEmpty || reps.isEmpty)
+                            .opacity(weight.isEmpty || reps.isEmpty ? 0.5 : 1.0)
                         }
                     }
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(radius: 2)
+            .background(Color.cardDark)
+            .cornerRadius(16)
         }
         .buttonStyle(.plain)
     }

@@ -13,26 +13,23 @@ struct HistoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    colors: [Color.indigo.opacity(0.1), Color.purple.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                Color.backgroundNavy
+                    .ignoresSafeArea()
                 
                 if viewModel.isLoading {
                     ProgressView()
+                        .tint(.white)
                 } else if viewModel.groupedWorkouts.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 60))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                         Text("No workout history yet")
                             .font(.headline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.8))
                         Text("Start logging sets to see your history")
                             .font(.subheadline)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.white.opacity(0.5))
                     }
                 } else {
                     ScrollView {
@@ -54,6 +51,9 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("History")
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .task {
                 await viewModel.loadData()
             }
@@ -83,11 +83,11 @@ struct WorkoutDayCard: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(workout.label)
                             .font(.headline)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.white)
                         
                         Text(workout.date, style: .date)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                     }
                     
                     Spacer()
@@ -95,11 +95,11 @@ struct WorkoutDayCard: View {
                     HStack(spacing: 4) {
                         Text("\(workout.sets.count) sets")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                         
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                     }
                 }
                 .padding()
@@ -109,6 +109,7 @@ struct WorkoutDayCard: View {
             // Expanded content
             if isExpanded {
                 Divider()
+                    .background(Color.white.opacity(0.2))
                 
                 ForEach(workout.sets) { set in
                     HStack {
@@ -116,15 +117,16 @@ struct WorkoutDayCard: View {
                             Text(exerciseName(set.exerciseId))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
+                                .foregroundStyle(.white)
                             
                             Text(set.displayText)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.6))
                             
                             if let notes = set.notes, !notes.isEmpty {
                                 Text(notes)
                                     .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.white.opacity(0.5))
                                     .italic()
                             }
                         }
@@ -133,7 +135,7 @@ struct WorkoutDayCard: View {
                         
                         Text(set.date, style: .time)
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.white.opacity(0.5))
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 8)
@@ -147,9 +149,8 @@ struct WorkoutDayCard: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color.cardDark)
         .cornerRadius(12)
-        .shadow(radius: 2)
     }
 }
 

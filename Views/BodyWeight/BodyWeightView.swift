@@ -14,15 +14,12 @@ struct BodyWeightView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    colors: [Color.indigo.opacity(0.1), Color.purple.opacity(0.1)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                Color.backgroundNavy
+                    .ignoresSafeArea()
                 
                 if viewModel.isLoading {
                     ProgressView()
+                        .tint(.white)
                 } else {
                     ScrollView {
                         VStack(spacing: 24) {
@@ -74,6 +71,9 @@ struct BodyWeightView: View {
                 }
             }
             .navigationTitle("Body Weight")
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $viewModel.showingAddLog) {
                 AddBodyWeightLogView { weight, date, notes in
                     Task {
@@ -147,7 +147,7 @@ struct StatCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.6))
             
             Text(value)
                 .font(.title2)
@@ -156,9 +156,8 @@ struct StatCard: View {
         }
         .padding()
         .frame(minWidth: 120)
-        .background(Color(.systemBackground))
+        .background(Color.cardDark)
         .cornerRadius(12)
-        .shadow(radius: 2)
     }
 }
 
@@ -170,6 +169,7 @@ struct BodyWeightChartView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Progress")
                 .font(.headline)
+                .foregroundStyle(.white)
                 .padding(.horizontal)
             
             Chart {
@@ -202,6 +202,7 @@ struct BodyWeightChartView: View {
                     AxisValueLabel {
                         if let weight = value.as(Double.self) {
                             Text("\(Int(weight))")
+                                .foregroundStyle(.white)
                         }
                     }
                 }
@@ -210,12 +211,12 @@ struct BodyWeightChartView: View {
                 AxisMarks { value in
                     AxisGridLine()
                     AxisValueLabel(format: .dateTime.month().day())
+                        .foregroundStyle(.white)
                 }
             }
             .padding()
-            .background(Color(.systemBackground))
+            .background(Color.cardDark)
             .cornerRadius(12)
-            .shadow(radius: 2)
             .padding(.horizontal)
         }
     }
@@ -229,15 +230,16 @@ struct WeightHistoryView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("History")
                 .font(.headline)
+                .foregroundStyle(.white)
                 .padding(.horizontal)
             
             if logs.isEmpty {
                 Text("No weight logs yet")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.6))
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color(.systemBackground))
+                    .background(Color.cardDark)
                     .cornerRadius(12)
                     .padding(.horizontal)
             } else {
@@ -246,15 +248,16 @@ struct WeightHistoryView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(Int(log.weight)) lbs")
                                 .font(.headline)
+                                .foregroundStyle(.white)
                             
                             Text(log.date, style: .date)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.6))
                             
                             if let notes = log.notes, !notes.isEmpty {
                                 Text(notes)
                                     .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.white.opacity(0.5))
                                     .italic()
                             }
                         }
@@ -262,7 +265,7 @@ struct WeightHistoryView: View {
                         Spacer()
                     }
                     .padding()
-                    .background(Color(.systemBackground))
+                    .background(Color.cardDark)
                     .cornerRadius(8)
                     .padding(.horizontal)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {

@@ -15,7 +15,11 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationStack {
-            List {
+            ZStack {
+                Color.backgroundNavy
+                    .ignoresSafeArea()
+                
+                List {
                 Section {
                     if let user = supabase.currentUser {
                         HStack {
@@ -26,24 +30,28 @@ struct ProfileView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(user.email ?? "User")
                                     .font(.headline)
+                                    .foregroundStyle(.white)
                                 
                                 Text("Plates Member")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.6))
                             }
                         }
                         .padding(.vertical, 8)
                     }
                 }
+                .listRowBackground(Color.cardDark)
                 
                 Section("App") {
                     HStack {
                         Label("Version", systemImage: "info.circle")
+                            .foregroundStyle(.white)
                         Spacer()
                         Text("1.0.0")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                     }
                 }
+                .listRowBackground(Color.cardDark)
                 
                 Section {
                     Button(role: .destructive) {
@@ -61,8 +69,14 @@ struct ProfileView: View {
                     }
                     .disabled(isSigningOut)
                 }
+                .listRowBackground(Color.cardDark)
+                }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Profile")
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .alert("Sign Out", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {

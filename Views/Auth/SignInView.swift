@@ -25,18 +25,31 @@ struct SignInView: View {
                 VStack(spacing: 24) {
                     Spacer()
                     
-                    // Logo
-                    VStack(spacing: 16) {
+                    // Header and Logo
+                    VStack(spacing: 20) {
+                        // Tagline
+                        Text("The easiest way to track your lifts and achieve progressive overload")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                        
+                        // App Name
+                        Text("Plates")
+                            .font(.system(size: 48, weight: .bold))
+                            .foregroundStyle(.white)
+                        
+                        // Logo
                         Image("plates-logo")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 200, height: 200)
+                            .frame(width: 180, height: 180)
                         
                         Text("The Lifter's Database")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.6))
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 30)
                     
                     // Sign In Form
                     VStack(spacing: 16) {

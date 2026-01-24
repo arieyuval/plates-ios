@@ -42,6 +42,21 @@ struct WorkoutSet: Identifiable, Codable, Hashable {
         }
         return "Invalid set"
     }
+    
+    /// Display text for body weight exercises
+    func displayText(usesBodyWeight: Bool) -> String {
+        if isStrength, let weight = weight, let reps = reps {
+            if usesBodyWeight {
+                let weightStr = weight > 0 ? "BW + \(Int(weight))" : "BW"
+                return "\(weightStr) × \(reps)"
+            } else {
+                return "\(Int(weight)) lbs × \(reps)"
+            }
+        } else if isCardio, let distance = distance, let duration = duration {
+            return "\(String(format: "%.2f", distance)) mi • \(duration) min"
+        }
+        return "Invalid set"
+    }
 
     enum CodingKeys: String, CodingKey {
         case id

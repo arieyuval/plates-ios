@@ -101,7 +101,7 @@ struct ExerciseCardView: View {
                             Text("Last Session")
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.5))
-                            Text(lastSession.displayText)
+                            Text(lastSession.displayText(usesBodyWeight: exercise.usesBodyWeight))
                                 .font(.callout)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white.opacity(0.95))
@@ -118,7 +118,7 @@ struct ExerciseCardView: View {
                             Text("Last Set")
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.5))
-                            Text(lastSet.displayText)
+                            Text(lastSet.displayText(usesBodyWeight: exercise.usesBodyWeight))
                                 .font(.callout)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(.white.opacity(0.95))
@@ -135,7 +135,7 @@ struct ExerciseCardView: View {
                             Text("\(exercise.defaultPRReps)RM PR")
                                 .font(.caption2)
                                 .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
-                            Text("\(Int(currentPR.weight)) lbs")
+                            Text(exercise.formatWeight(currentPR.weight))
                                 .font(.callout)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
@@ -150,23 +150,26 @@ struct ExerciseCardView: View {
                 // Quick log form
                 if exercise.exerciseType == .strength {
                     HStack(spacing: 10) {
-                        TextField("", text: $weight, prompt: Text("Wt").foregroundStyle(.white.opacity(0.6)))
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white.opacity(0.9))
-                            .frame(width: 70)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 12)
-                            .background(Color.statBoxDark)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                        
-                        Text("×")
-                            .foregroundStyle(.white.opacity(0.5))
-                            .font(.callout)
+                        // Only show weight field for non-bodyweight exercises
+                        if !exercise.usesBodyWeight {
+                            TextField("", text: $weight, prompt: Text("Wt").foregroundStyle(.white.opacity(0.6)))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .frame(width: 70)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 12)
+                                .background(Color.statBoxDark)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                            
+                            Text("×")
+                                .foregroundStyle(.white.opacity(0.5))
+                                .font(.callout)
+                        }
                         
                         TextField("", text: $reps, prompt: Text("Reps").foregroundStyle(.white.opacity(0.6)))
                             .keyboardType(.numberPad)
@@ -201,8 +204,8 @@ struct ExerciseCardView: View {
                                     .background(Color.blue)
                                     .cornerRadius(8)
                             }
-                            .disabled(weight.isEmpty || reps.isEmpty)
-                            .opacity(weight.isEmpty || reps.isEmpty ? 0.5 : 1.0)
+                            .disabled(reps.isEmpty || (!exercise.usesBodyWeight && weight.isEmpty))
+                            .opacity((reps.isEmpty || (!exercise.usesBodyWeight && weight.isEmpty)) ? 0.5 : 1.0)
                         }
                     }
                 } else if exercise.exerciseType == .cardio {
@@ -272,13 +275,28 @@ struct ExerciseCardView: View {
     }
     
     private func logStrengthSet() {
-        guard let weightValue = Double(weight),
-              let repsValue = Int(reps),
+        let repsValue: Int?
+        let weightValue: Double?
+        
+        // For body weight exercises, use 0 if no weight entered
+        if exercise.usesBodyWeight {
+            weightValue = weight.isEmpty ? 0 : Double(weight)
+            repsValue = Int(reps)
+        } else {
+            // Regular exercises require both weight and reps
+            guard let w = Double(weight), let r = Int(reps) else {
+                return
+            }
+            weightValue = w
+            repsValue = r
+        }
+        
+        guard let w = weightValue, let r = repsValue,
               let quickLog = onQuickLogStrength else {
             return
         }
         
-        quickLog(weightValue, repsValue)
+        quickLog(w, r)
         
         // Show success animation
         withAnimation {

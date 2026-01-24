@@ -102,6 +102,33 @@ struct WorkoutCalculations {
         return dataPoints.sorted { $0.0 < $1.0 }
     }
     
+    // MARK: - Body Weight Exercise Chart Data (Reps Progression)
+    
+    /// Prepare chart data for body weight exercises showing max reps per day
+    static func prepareBodyWeightExerciseChartData(sets: [WorkoutSet]) -> [(date: Date, reps: Int)] {
+        // Group sets by day
+        var byDay: [Date: WorkoutSet] = [:]
+        
+        for set in sets {
+            guard let reps = set.reps, reps > 0 else { continue }
+            let dayStart = Calendar.current.startOfDay(for: set.date)
+            
+            if let existing = byDay[dayStart] {
+                // Keep the set with more reps
+                if reps > (existing.reps ?? 0) {
+                    byDay[dayStart] = set
+                }
+            } else {
+                byDay[dayStart] = set
+            }
+        }
+        
+        // Sort by date (oldest first for chart)
+        return byDay
+            .map { (date: $0.key, reps: $0.value.reps ?? 0) }
+            .sorted { $0.date < $1.date }
+    }
+    
     // MARK: - Workout Labels
     
     static func determineWorkoutLabel(exercises: [(name: String, muscleGroup: MuscleGroup)]) -> String {

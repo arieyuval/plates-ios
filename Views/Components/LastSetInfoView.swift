@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LastSetInfoView: View {
     let set: WorkoutSet
+    let exercise: Exercise
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -18,7 +19,7 @@ struct LastSetInfoView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(set.displayText)
+                    Text(set.displayText(usesBodyWeight: exercise.usesBodyWeight))
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white.opacity(0.95))

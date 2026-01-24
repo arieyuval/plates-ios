@@ -93,6 +93,10 @@ class ExerciseDetailViewModel: ObservableObject {
         WorkoutCalculations.prepareChartData(sets: sets, repFilter: repFilter)
     }
     
+    func bodyWeightChartData() -> [(date: Date, reps: Int)] {
+        WorkoutCalculations.prepareBodyWeightExerciseChartData(sets: sets)
+    }
+    
     func cardioChartData() -> [(date: Date, pace: Double)] {
         // Calculate average pace (minutes per mile) for cardio exercises
         let grouped = Dictionary(grouping: sets.filter { $0.isCardio }) {

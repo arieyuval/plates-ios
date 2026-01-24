@@ -59,11 +59,12 @@ struct ExerciseDetailView: View {
                 
                 // Last Set Info
                 if let lastSet = viewModel.lastSet {
-                    LastSetInfoView(set: lastSet)
+                    LastSetInfoView(set: lastSet, exercise: viewModel.exercise)
                 }
                 
                 // PR Selector and Display
                 PRSelectorView(
+                    exercise: viewModel.exercise,
                     selectedRepTarget: $viewModel.selectedRepTarget,
                     currentPR: viewModel.currentPR
                 )
@@ -71,10 +72,18 @@ struct ExerciseDetailView: View {
                 // Progress Chart
                 if !viewModel.sets.isEmpty {
                     if viewModel.exercise.exerciseType == .strength {
-                        ProgressChartView(
-                            chartData: viewModel.chartData(repFilter: viewModel.selectedRepTarget),
-                            repFilter: viewModel.selectedRepTarget
-                        )
+                        if viewModel.exercise.usesBodyWeight {
+                            // Body weight exercises show reps progression
+                            BodyWeightExerciseChartView(
+                                chartData: viewModel.bodyWeightChartData()
+                            )
+                        } else {
+                            // Regular strength exercises show weight progression
+                            ProgressChartView(
+                                chartData: viewModel.chartData(repFilter: viewModel.selectedRepTarget),
+                                repFilter: viewModel.selectedRepTarget
+                            )
+                        }
                     } else if viewModel.exercise.exerciseType == .cardio {
                         CardioProgressChartView(
                             chartData: viewModel.cardioChartData()

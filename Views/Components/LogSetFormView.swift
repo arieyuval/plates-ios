@@ -29,10 +29,10 @@ struct LogSetFormView: View {
                     // Strength inputs
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Weight (lbs)")
+                            Text(exercise.usesBodyWeight ? "Added Weight (optional)" : "Weight (lbs)")
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.7))
-                            TextField("", text: $weight, prompt: Text("0").foregroundStyle(.white.opacity(0.6)))
+                            TextField("", text: $weight, prompt: Text(exercise.usesBodyWeight ? "0 for bodyweight only" : "0").foregroundStyle(.white.opacity(0.6)))
                                 .keyboardType(.decimalPad)
                                 .padding(12)
                                 .background(Color.statBoxDark)
@@ -58,6 +58,12 @@ struct LogSetFormView: View {
                                     RoundedRectangle(cornerRadius: 8)
                                         .stroke(Color.white.opacity(0.3), lineWidth: 1)
                                 )
+                        }
+                    }
+                    .onAppear {
+                        // Pre-fill weight with 0 for body weight exercises
+                        if exercise.usesBodyWeight && weight.isEmpty {
+                            weight = "0"
                         }
                     }
                 } else {
@@ -149,6 +155,11 @@ struct LogSetFormView: View {
     
     private var isValid: Bool {
         if exercise.exerciseType == .strength {
+            // Body weight exercises only require reps (weight can be 0)
+            if exercise.usesBodyWeight {
+                return !reps.isEmpty && Int(reps) != nil && Int(reps)! > 0
+            }
+            // Regular strength exercises require both weight and reps
             return !weight.isEmpty && !reps.isEmpty
         } else {
             return !distance.isEmpty && !duration.isEmpty
@@ -156,11 +167,16 @@ struct LogSetFormView: View {
     }
     
     private func logSet() {
-        let weightValue = Double(weight)
+        var weightValue = Double(weight)
         let repsValue = Int(reps)
         let distanceValue = Double(distance)
         let durationValue = Int(duration)
         let notesValue = notes.isEmpty ? nil : notes
+        
+        // For body weight exercises, default to 0 if weight is empty
+        if exercise.exerciseType == .strength && exercise.usesBodyWeight && weight.isEmpty {
+            weightValue = 0
+        }
         
         onSubmit(weightValue, repsValue, distanceValue, durationValue, notesValue)
         
@@ -173,7 +189,7 @@ struct LogSetFormView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             withAnimation {
                 showSuccess = false
-                weight = ""
+                weight = exercise.usesBodyWeight ? "0" : ""
                 reps = ""
                 distance = ""
                 duration = ""

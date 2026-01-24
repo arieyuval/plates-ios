@@ -139,3 +139,69 @@ struct CardioProgressChartView: View {
     }
 }
 
+struct BodyWeightExerciseChartView: View {
+    let chartData: [(date: Date, reps: Int)]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Reps Progress")
+                .font(.headline)
+                .foregroundStyle(.white.opacity(0.95))
+            
+            if chartData.isEmpty {
+                Text("No data yet")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.cardDark)
+                    .cornerRadius(12)
+            } else {
+                Chart {
+                    ForEach(chartData, id: \.date) { dataPoint in
+                        LineMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Reps", dataPoint.reps)
+                        )
+                        .foregroundStyle(Color.purple)
+                        
+                        PointMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Reps", dataPoint.reps)
+                        )
+                        .foregroundStyle(Color.purple)
+                    }
+                }
+                .frame(height: 200)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                            .foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel {
+                            if let reps = value.as(Int.self) {
+                                Text("\(reps)")
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
+                        }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                            .foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel(format: .dateTime.month().day())
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+                .padding()
+                .background(Color.cardDark)
+                .cornerRadius(12)
+            }
+            
+            Text("Maximum reps achieved per day")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .padding(.horizontal)
+    }
+}

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PRSelectorView: View {
+    let exercise: Exercise
     @Binding var selectedRepTarget: Int
     let currentPR: PersonalRecord?
     
@@ -59,7 +60,7 @@ struct PRSelectorView: View {
             if let pr = currentPR {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(Int(pr.weight)) lbs")
+                        Text(exercise.formatWeight(pr.weight))
                             .font(.title)
                             .fontWeight(.bold)
                             .foregroundStyle(.white.opacity(0.95))

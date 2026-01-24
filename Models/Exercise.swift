@@ -52,4 +52,14 @@ struct Exercise: Identifiable, Codable, Hashable {
         self.pinnedNote = pinnedNote
         self.createdAt = createdAt
     }
+    
+    // MARK: - Helper Methods
+    
+    /// Format weight for display based on whether exercise uses body weight
+    func formatWeight(_ weight: Double) -> String {
+        if !usesBodyWeight {
+            return "\(Int(weight)) lbs"
+        }
+        return weight > 0 ? "BW + \(Int(weight)) lbs" : "BW"
+    }
 }

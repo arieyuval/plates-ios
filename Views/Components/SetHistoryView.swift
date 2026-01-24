@@ -113,7 +113,7 @@ struct CollapsibleDayGroup: View {
                         }
                         
                         // Set info on the right
-                        Text(topSet.displayText)
+                        Text(topSet.displayText(usesBodyWeight: exercise.usesBodyWeight))
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.white.opacity(0.95))
@@ -170,7 +170,7 @@ struct CollapsibleDayGroup: View {
                         }
                         
                         // Set info on the right
-                        Text(set.displayText)
+                        Text(set.displayText(usesBodyWeight: exercise.usesBodyWeight))
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.white.opacity(0.85))

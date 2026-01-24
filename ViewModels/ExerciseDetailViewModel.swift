@@ -93,6 +93,25 @@ class ExerciseDetailViewModel: ObservableObject {
         WorkoutCalculations.prepareChartData(sets: sets, repFilter: repFilter)
     }
     
+    func cardioChartData() -> [(date: Date, pace: Double)] {
+        // Calculate average pace (minutes per mile) for cardio exercises
+        let grouped = Dictionary(grouping: sets.filter { $0.isCardio }) {
+            Calendar.current.startOfDay(for: $0.date)
+        }
+        
+        return grouped.compactMap { date, daySets in
+            // Calculate average pace for the day
+            let totalDistance = daySets.compactMap { $0.distance }.reduce(0, +)
+            let totalDuration = daySets.compactMap { $0.duration }.reduce(0, +)
+            
+            guard totalDistance > 0 else { return nil }
+            let averagePace = Double(totalDuration) / totalDistance // minutes per mile
+            
+            return (date: date, pace: averagePace)
+        }
+        .sorted { $0.date < $1.date }
+    }
+    
     var groupedSetsByDate: [(date: Date, sets: [WorkoutSet])] {
         let grouped = Dictionary(grouping: sets) {
             Calendar.current.startOfDay(for: $0.date)

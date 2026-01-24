@@ -26,7 +26,7 @@ struct MainTabView: View {
             
             BodyWeightView()
                 .tabItem {
-                    Label("Weight", systemImage: "scalemass")
+                    Label("Weight", systemImage: "scale.3d")
                 }
                 .tag(2)
             
@@ -36,6 +36,7 @@ struct MainTabView: View {
                 }
                 .tag(3)
         }
+        .tint(.white)
     }
 }
 

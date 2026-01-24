@@ -18,9 +18,10 @@ struct PinnedNoteSection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "pin.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                 Text("Pinned Note")
                     .font(.headline)
+                    .foregroundStyle(.white.opacity(0.95))
                 Spacer()
                 
                 if isEditing {
@@ -31,12 +32,14 @@ struct PinnedNoteSection: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.semibold)
+                    .foregroundStyle(.blue)
                 } else {
                     Button {
                         isEditing = true
                         isFocused = true
                     } label: {
                         Image(systemName: "pencil")
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
             }
@@ -45,25 +48,27 @@ struct PinnedNoteSection: View {
                 TextEditor(text: $note)
                     .frame(minHeight: 100)
                     .padding(8)
-                    .background(Color(.systemGray6))
+                    .background(Color.cardDark)
+                    .foregroundStyle(.white.opacity(0.9))
                     .cornerRadius(8)
                     .focused($isFocused)
+                    .scrollContentBackground(.hidden)
             } else if !note.isEmpty {
                 Text(note)
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.85))
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
+                    .background(Color.cardDark)
                     .cornerRadius(8)
             } else {
                 Text("Tap to add a note...")
                     .font(.body)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.white.opacity(0.4))
                     .italic()
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
+                    .background(Color.cardDark)
                     .cornerRadius(8)
                     .onTapGesture {
                         isEditing = true

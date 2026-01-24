@@ -17,8 +17,12 @@ struct ExerciseDetailView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
+        ZStack {
+            Color.backgroundNavy
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 24) {
                 // Muscle group badge
                 HStack {
                     Text(viewModel.exercise.muscleGroup.displayName)
@@ -44,18 +48,7 @@ struct ExerciseDetailView: View {
                     }
                 )
                 
-                // Last Set Info
-                if let lastSet = viewModel.lastSet {
-                    LastSetInfoView(set: lastSet)
-                }
-                
-                // PR Selector and Display
-                PRSelectorView(
-                    selectedRepTarget: $viewModel.selectedRepTarget,
-                    currentPR: viewModel.currentPR
-                )
-                
-                // Log Set Form
+                // Log Set Form (MOVED UP)
                 LogSetFormView(exercise: viewModel.exercise) { weight, reps, distance, duration, notes in
                     Task {
                         await viewModel.logSet(
@@ -68,15 +61,29 @@ struct ExerciseDetailView: View {
                     }
                 }
                 
-                // Personal Records Table
-                PersonalRecordsTableView(prs: viewModel.personalRecords)
+                // Last Set Info
+                if let lastSet = viewModel.lastSet {
+                    LastSetInfoView(set: lastSet)
+                }
+                
+                // PR Selector and Display
+                PRSelectorView(
+                    selectedRepTarget: $viewModel.selectedRepTarget,
+                    currentPR: viewModel.currentPR
+                )
                 
                 // Progress Chart
-                if !viewModel.sets.isEmpty && viewModel.exercise.exerciseType == .strength {
-                    ProgressChartView(
-                        chartData: viewModel.chartData(repFilter: viewModel.selectedRepTarget),
-                        repFilter: viewModel.selectedRepTarget
-                    )
+                if !viewModel.sets.isEmpty {
+                    if viewModel.exercise.exerciseType == .strength {
+                        ProgressChartView(
+                            chartData: viewModel.chartData(repFilter: viewModel.selectedRepTarget),
+                            repFilter: viewModel.selectedRepTarget
+                        )
+                    } else if viewModel.exercise.exerciseType == .cardio {
+                        CardioProgressChartView(
+                            chartData: viewModel.cardioChartData()
+                        )
+                    }
                 }
                 
                 // Set History
@@ -91,8 +98,12 @@ struct ExerciseDetailView: View {
             }
             .padding(.vertical)
         }
+        }
         .navigationTitle(viewModel.exercise.name)
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .task {
             await viewModel.loadSets()
         }

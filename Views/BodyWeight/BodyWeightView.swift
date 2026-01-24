@@ -71,9 +71,10 @@ struct BodyWeightView: View {
                 }
             }
             .navigationTitle("Body Weight")
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $viewModel.showingAddLog) {
                 AddBodyWeightLogView { weight, date, notes in
                     Task {
@@ -110,14 +111,6 @@ struct StatsCardsView: View {
             HStack(spacing: 16) {
                 if let starting = startingWeight {
                     StatCard(title: "Starting", value: "\(Int(starting)) lbs", color: .gray)
-                }
-                
-                if let change = totalChange {
-                    StatCard(
-                        title: "Total Change",
-                        value: "\(change > 0 ? "+" : "")\(Int(change)) lbs",
-                        color: change > 0 ? .green : .red
-                    )
                 }
                 
                 if let current = currentWeight {
@@ -165,6 +158,25 @@ struct BodyWeightChartView: View {
     let chartData: [(date: Date, weight: Double)]
     let goalWeight: Double?
     
+    // Check if current weight equals goal weight
+    private var isAtGoal: Bool {
+        guard let goal = goalWeight,
+              let currentWeight = chartData.first?.weight else {
+            return false
+        }
+        return abs(currentWeight - goal) < 0.1 // Within 0.1 lbs tolerance
+    }
+    
+    // Color for weight line
+    private var weightLineColor: Color {
+        isAtGoal ? .green : .blue
+    }
+    
+    // Color for goal line
+    private var goalLineColor: Color {
+        isAtGoal ? .green : .purple
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Progress")
@@ -179,20 +191,23 @@ struct BodyWeightChartView: View {
                         x: .value("Date", dataPoint.date),
                         y: .value("Weight", dataPoint.weight)
                     )
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(weightLineColor)
                     
                     PointMark(
                         x: .value("Date", dataPoint.date),
                         y: .value("Weight", dataPoint.weight)
                     )
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(weightLineColor)
                 }
                 
                 // Goal line
                 if let goal = goalWeight {
                     RuleMark(y: .value("Goal", goal))
-                        .foregroundStyle(Color.purple.opacity(0.5))
-                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                        .foregroundStyle(goalLineColor.opacity(0.5))
+                        .lineStyle(StrokeStyle(
+                            lineWidth: 2,
+                            dash: isAtGoal ? [] : [5, 5] // Solid if at goal, dashed otherwise
+                        ))
                 }
             }
             .frame(height: 250)

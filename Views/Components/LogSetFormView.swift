@@ -64,7 +64,7 @@ struct LogSetFormView: View {
                     // Cardio inputs
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Distance (mi)")
+                            Text("Distance (Dist)")
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.7))
                             TextField("", text: $distance, prompt: Text("0.0").foregroundStyle(.white.opacity(0.6)))
@@ -80,7 +80,7 @@ struct LogSetFormView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Duration (min)")
+                            Text("Duration (Time)")
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.7))
                             TextField("", text: $duration, prompt: Text("0").foregroundStyle(.white.opacity(0.6)))

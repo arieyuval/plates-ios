@@ -6,6 +6,26 @@
 //
 
 import SwiftUI
+import Combine
+
+// MARK: - Date Extension for Timezone Conversion
+extension Date {
+    /// Converts UTC date to user's local timezone (defaults to PST if system timezone not available)
+    func toLocalTime() -> Date {
+        // Try to get the user's current timezone, fall back to PST
+        let userTimezone = TimeZone.current
+        let pstTimezone = TimeZone(identifier: "America/Los_Angeles") ?? TimeZone.current
+        
+        // Use current timezone first, PST as fallback
+        let timezone = userTimezone
+        
+        let sourceOffset = TimeZone(identifier: "UTC")?.secondsFromGMT(for: self) ?? 0
+        let destinationOffset = timezone.secondsFromGMT(for: self)
+        let timeInterval = TimeInterval(destinationOffset - sourceOffset)
+        
+        return Date(timeInterval: timeInterval, since: self)
+    }
+}
 
 struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
@@ -51,9 +71,10 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("History")
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
                 await viewModel.loadData()
             }
@@ -70,6 +91,19 @@ struct WorkoutDayCard: View {
     let onDelete: (UUID) -> Void
     
     @State private var isExpanded = false
+    @State private var expandedExercises: Set<UUID> = []
+    
+    // Group sets by exercise
+    private var groupedByExercise: [(exerciseId: UUID, sets: [WorkoutSet])] {
+        let grouped = Dictionary(grouping: workout.sets) { $0.exerciseId }
+        return grouped.map { (exerciseId: $0.key, sets: $0.value.sorted { $0.date > $1.date }) }
+            .sorted { lhs, rhs in
+                // Sort by the time of the first set (most recent first)
+                guard let lhsDate = lhs.sets.first?.date,
+                      let rhsDate = rhs.sets.first?.date else { return false }
+                return lhsDate > rhsDate
+            }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -106,39 +140,173 @@ struct WorkoutDayCard: View {
             }
             .buttonStyle(.plain)
             
-            // Expanded content
+            // Expanded content - grouped by exercise
             if isExpanded {
                 Divider()
                     .background(Color.white.opacity(0.2))
                 
-                ForEach(workout.sets) { set in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(exerciseName(set.exerciseId))
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(.white)
-                            
-                            Text(set.displayText)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
-                            
-                            if let notes = set.notes, !notes.isEmpty {
-                                Text(notes)
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.5))
-                                    .italic()
+                ForEach(groupedByExercise, id: \.exerciseId) { group in
+                    ExerciseGroupView(
+                        exerciseId: group.exerciseId,
+                        exerciseName: exerciseName(group.exerciseId),
+                        sets: group.sets,
+                        isExpanded: expandedExercises.contains(group.exerciseId),
+                        onToggle: {
+                            if expandedExercises.contains(group.exerciseId) {
+                                expandedExercises.remove(group.exerciseId)
+                            } else {
+                                expandedExercises.insert(group.exerciseId)
                             }
-                        }
-                        
-                        Spacer()
-                        
-                        Text(set.date, style: .time)
+                        },
+                        onDelete: onDelete
+                    )
+                }
+            }
+        }
+        .background(Color.cardDark)
+        .cornerRadius(12)
+    }
+}
+
+struct ExerciseGroupView: View {
+    let exerciseId: UUID
+    let exerciseName: String
+    let sets: [WorkoutSet]
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    let onDelete: (UUID) -> Void
+    
+    // Get the top set for the exercise (heaviest for strength, longest distance for cardio)
+    private var topSet: WorkoutSet? {
+        // Check if strength or cardio by looking at first set
+        if let first = sets.first {
+            if first.isStrength {
+                return sets.max { set1, set2 in
+                    guard let w1 = set1.weight, let w2 = set2.weight else { return false }
+                    return w1 < w2
+                }
+            } else if first.isCardio {
+                return sets.max { set1, set2 in
+                    guard let d1 = set1.distance, let d2 = set2.distance else { return false }
+                    return d1 < d2
+                }
+            }
+        }
+        return sets.first
+    }
+    
+    // Get remaining sets (excluding the top set)
+    private var remainingSets: [WorkoutSet] {
+        guard let top = topSet else { return sets }
+        return sets.filter { $0.id != top.id }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Exercise name header
+            NavigationLink(destination: ExerciseDetailViewFromHistory(exerciseId: exerciseId)) {
+                Text(exerciseName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.blue)
+                    .underline()
+                    .padding(.horizontal)
+                    .padding(.top, 4)
+            }
+            
+            // Top set (always visible) with new layout: date | notes | set info | arrow
+            if let topSet = topSet {
+                Button(action: {
+                    if !remainingSets.isEmpty {
+                        onToggle()
+                    }
+                }) {
+                    HStack(alignment: .center, spacing: 8) {
+                        // Date on the left
+                        Text(topSet.date.toLocalTime(), style: .time)
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.5))
+                            .frame(width: 50, alignment: .leading)
+                        
+                        // Notes in the middle (or placeholder)
+                        if let notes = topSet.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Text("—")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.3))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        // Set info on the right
+                        Text(topSet.displayText)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(alignment: .trailing)
+                        
+                        // Arrow (only if there are more sets)
+                        if !remainingSets.isEmpty {
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.5))
+                                .frame(width: 16)
+                        } else {
+                            Color.clear.frame(width: 16)
+                        }
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        onDelete(topSet.id)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+            
+            // Remaining sets (collapsible) with same layout
+            if isExpanded {
+                ForEach(remainingSets) { set in
+                    HStack(alignment: .center, spacing: 8) {
+                        // Date on the left
+                        Text(set.date.toLocalTime(), style: .time)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .frame(width: 50, alignment: .leading)
+                        
+                        // Notes in the middle (or placeholder)
+                        if let notes = set.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Text("—")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.2))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        // Set info on the right
+                        Text(set.displayText)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .frame(alignment: .trailing)
+                        
+                        Color.clear.frame(width: 16)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             onDelete(set.id)
@@ -149,8 +317,53 @@ struct WorkoutDayCard: View {
                 }
             }
         }
-        .background(Color.cardDark)
-        .cornerRadius(12)
+    }
+}
+
+// Helper view to navigate to exercise detail from history
+struct ExerciseDetailViewFromHistory: View {
+    let exerciseId: UUID
+    @StateObject private var viewModel = ExerciseDetailViewFromHistoryViewModel()
+    
+    var body: some View {
+        Group {
+            if let exercise = viewModel.exercise {
+                ExerciseDetailView(exercise: exercise)
+            } else if viewModel.isLoading {
+                ProgressView()
+            } else {
+                Text("Exercise not found")
+            }
+        }
+        .task {
+            await viewModel.loadExercise(exerciseId)
+        }
+    }
+}
+
+class ExerciseDetailViewFromHistoryViewModel: ObservableObject {
+    @Published var exercise: Exercise?
+    @Published var isLoading = false
+    
+    private let supabase = SupabaseManager.shared
+    
+    func loadExercise(_ exerciseId: UUID) async {
+        await MainActor.run {
+            isLoading = true
+        }
+        
+        do {
+            let exercises = try await supabase.fetchExercises()
+            await MainActor.run {
+                exercise = exercises.first { $0.id == exerciseId }
+            }
+        } catch {
+            print("Failed to load exercise: \(error)")
+        }
+        
+        await MainActor.run {
+            isLoading = false
+        }
     }
 }
 

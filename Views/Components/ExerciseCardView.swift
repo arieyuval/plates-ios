@@ -12,12 +12,46 @@ struct ExerciseCardView: View {
     let lastSession: WorkoutSet?
     let lastSet: WorkoutSet?
     let currentPR: PersonalRecord?
-    let onQuickLog: (Double, Int) -> Void
+    let onQuickLogStrength: ((Double, Int) -> Void)?
+    let onQuickLogCardio: ((Double, Int) -> Void)?
     
     @State private var weight = ""
     @State private var reps = ""
+    @State private var distance = ""
+    @State private var duration = ""
     @State private var showSuccess = false
     @Environment(\.colorScheme) var colorScheme
+    
+    // Convenience initializer for strength exercises
+    init(
+        exercise: Exercise,
+        lastSession: WorkoutSet?,
+        lastSet: WorkoutSet?,
+        currentPR: PersonalRecord?,
+        onQuickLog: @escaping (Double, Int) -> Void
+    ) {
+        self.exercise = exercise
+        self.lastSession = lastSession
+        self.lastSet = lastSet
+        self.currentPR = currentPR
+        self.onQuickLogStrength = exercise.exerciseType == .strength ? onQuickLog : nil
+        self.onQuickLogCardio = exercise.exerciseType == .cardio ? onQuickLog : nil
+    }
+    
+    // Compute which note to display based on priority
+    private var displayNote: String? {
+        // Priority 1: Pinned note
+        if let pinnedNote = exercise.pinnedNote, !pinnedNote.isEmpty {
+            return pinnedNote
+        }
+        
+        // Priority 2: Last set note (from last session)
+        if let lastSetNote = lastSet?.notes, !lastSetNote.isEmpty {
+            return lastSetNote
+        }
+        
+        return nil
+    }
     
     var body: some View {
         NavigationLink {
@@ -32,10 +66,24 @@ struct ExerciseCardView: View {
                             .fontWeight(.bold)
                             .foregroundStyle(.white.opacity(0.95))
                         
-                        // Muscle group badge
-                        Text(exercise.muscleGroup.displayName)
-                            .font(.subheadline)
-                            .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                        // Muscle group badge and note
+                        HStack(spacing: 8) {
+                            Text(exercise.muscleGroup.displayName)
+                                .font(.subheadline)
+                                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                            
+                            if let note = displayNote {
+                                Text(note)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
+                                    .cornerRadius(6)
+                                    .lineLimit(1)
+                            }
+                        }
                     }
                     
                     Spacer()
@@ -143,7 +191,7 @@ struct ExerciseCardView: View {
                                 .transition(.scale.combined(with: .opacity))
                         } else {
                             Button {
-                                logSet()
+                                logStrengthSet()
                             } label: {
                                 Image(systemName: "plus")
                                     .font(.callout)
@@ -157,6 +205,63 @@ struct ExerciseCardView: View {
                             .opacity(weight.isEmpty || reps.isEmpty ? 0.5 : 1.0)
                         }
                     }
+                } else if exercise.exerciseType == .cardio {
+                    HStack(spacing: 10) {
+                        TextField("", text: $distance, prompt: Text("Dist").foregroundStyle(.white.opacity(0.6)))
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 70)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(Color.statBoxDark)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        Text("×")
+                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.callout)
+                        
+                        TextField("", text: $duration, prompt: Text("Time").foregroundStyle(.white.opacity(0.6)))
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 70)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(Color.statBoxDark)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        Spacer()
+                        
+                        if showSuccess {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.title3)
+                                .transition(.scale.combined(with: .opacity))
+                        } else {
+                            Button {
+                                logCardioSet()
+                            } label: {
+                                Image(systemName: "plus")
+                                    .font(.callout)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
+                            }
+                            .disabled(distance.isEmpty || duration.isEmpty)
+                            .opacity(distance.isEmpty || duration.isEmpty ? 0.5 : 1.0)
+                        }
+                    }
                 }
             }
             .padding(14)
@@ -166,13 +271,14 @@ struct ExerciseCardView: View {
         .buttonStyle(.plain)
     }
     
-    private func logSet() {
+    private func logStrengthSet() {
         guard let weightValue = Double(weight),
-              let repsValue = Int(reps) else {
+              let repsValue = Int(reps),
+              let quickLog = onQuickLogStrength else {
             return
         }
         
-        onQuickLog(weightValue, repsValue)
+        quickLog(weightValue, repsValue)
         
         // Show success animation
         withAnimation {
@@ -185,6 +291,34 @@ struct ExerciseCardView: View {
                 showSuccess = false
                 weight = ""
                 reps = ""
+            }
+        }
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+    
+    private func logCardioSet() {
+        guard let distanceValue = Double(distance),
+              let durationValue = Int(duration),
+              let quickLog = onQuickLogCardio else {
+            return
+        }
+        
+        quickLog(distanceValue, durationValue)
+        
+        // Show success animation
+        withAnimation {
+            showSuccess = true
+        }
+        
+        // Reset after 2 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showSuccess = false
+                distance = ""
+                duration = ""
             }
         }
         

@@ -13,63 +13,54 @@ struct BodyWeightView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.backgroundNavy
-                    .ignoresSafeArea()
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            // Stats cards
-                            StatsCardsView(
-                                startingWeight: viewModel.startingWeight,
-                                currentWeight: viewModel.currentWeight,
-                                totalChange: viewModel.totalChange,
-                                goalWeight: viewModel.goalWeight,
-                                onEditGoal: {
-                                    viewModel.showingEditGoal = true
-                                }
-                            )
-                            
-                            // Progress chart
-                            if !viewModel.logs.isEmpty {
-                                BodyWeightChartView(
-                                    chartData: viewModel.chartData,
-                                    goalWeight: viewModel.goalWeight
-                                )
-                            }
-                            
-                            // Add weight button
-                            Button {
-                                viewModel.showingAddLog = true
-                            } label: {
-                                Label("Log Weight", systemImage: "plus.circle.fill")
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .foregroundStyle(.white)
-                                    .cornerRadius(10)
-                            }
-                            .padding(.horizontal)
-                            
-                            // Weight history
-                            WeightHistoryView(
-                                logs: viewModel.logs,
-                                onDelete: { logId in
-                                    Task {
-                                        await viewModel.deleteLog(logId)
-                                    }
-                                }
-                            )
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Stats cards
+                    StatsCardsView(
+                        startingWeight: viewModel.startingWeight,
+                        currentWeight: viewModel.currentWeight,
+                        totalChange: viewModel.totalChange,
+                        goalWeight: viewModel.goalWeight,
+                        onEditGoal: {
+                            viewModel.showingEditGoal = true
                         }
-                        .padding(.vertical)
+                    )
+                    
+                    // Progress chart
+                    if !viewModel.logs.isEmpty {
+                        BodyWeightChartView(
+                            chartData: viewModel.chartData,
+                            goalWeight: viewModel.goalWeight
+                        )
                     }
+                    
+                    // Add weight button
+                    Button {
+                        viewModel.showingAddLog = true
+                    } label: {
+                        Label("Log Weight", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+                    
+                    // Weight history
+                    WeightHistoryView(
+                        logs: viewModel.logs,
+                        onDelete: { logId in
+                            Task {
+                                await viewModel.deleteLog(logId)
+                            }
+                        }
+                    )
                 }
+                .padding(.vertical)
             }
+            .background(Color.backgroundNavy)
             .navigationTitle("Body Weight")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)

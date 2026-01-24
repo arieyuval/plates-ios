@@ -13,53 +13,48 @@ struct ExerciseListView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Dark navy background
-                Color.backgroundNavy
-                    .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Search bar
+                SearchBar(text: $viewModel.searchText)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
                 
-                VStack(spacing: 0) {
-                    // Search bar
-                    SearchBar(text: $viewModel.searchText)
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                    
-                    // Muscle group tabs
-                    MuscleGroupTabsView(selectedGroup: $viewModel.selectedMuscleGroup)
-                        .padding(.vertical, 8)
-                    
-                    // Exercise list
-                    if viewModel.isLoading {
-                        Spacer()
-                        ProgressView()
-                            .tint(.white)
-                        Spacer()
-                    } else if viewModel.filteredExercises.isEmpty {
-                        Spacer()
-                        Text("No exercises found")
-                            .foregroundStyle(.white.opacity(0.6))
-                        Spacer()
-                    } else {
-                        ScrollView {
-                            LazyVStack(spacing: 12) {
-                                ForEach(viewModel.filteredExercises) { exercise in
-                                    ExerciseCardView(
-                                        exercise: exercise,
-                                        lastSession: viewModel.getLastSession(for: exercise.id),
-                                        lastSet: viewModel.getLastSet(for: exercise.id),
-                                        currentPR: viewModel.getCurrentPR(for: exercise.id, exercise: exercise)
-                                    ) { weight, reps in
-                                        Task {
-                                            await viewModel.quickLogSet(exerciseId: exercise.id, weight: weight, reps: reps)
-                                        }
+                // Muscle group tabs
+                MuscleGroupTabsView(selectedGroup: $viewModel.selectedMuscleGroup)
+                    .padding(.vertical, 8)
+                
+                // Exercise list
+                if viewModel.isLoading {
+                    Spacer()
+                    ProgressView()
+                        .tint(.white)
+                    Spacer()
+                } else if viewModel.filteredExercises.isEmpty {
+                    Spacer()
+                    Text("No exercises found")
+                        .foregroundStyle(.white.opacity(0.6))
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(viewModel.filteredExercises) { exercise in
+                                ExerciseCardView(
+                                    exercise: exercise,
+                                    lastSession: viewModel.getLastSession(for: exercise.id),
+                                    lastSet: viewModel.getLastSet(for: exercise.id),
+                                    currentPR: viewModel.getCurrentPR(for: exercise.id, exercise: exercise)
+                                ) { weight, reps in
+                                    Task {
+                                        await viewModel.quickLogSet(exerciseId: exercise.id, weight: weight, reps: reps)
                                     }
                                 }
                             }
-                            .padding()
                         }
+                        .padding()
                     }
                 }
             }
+            .background(Color.backgroundNavy)
             .navigationTitle("Exercises")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)

@@ -15,64 +15,60 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.backgroundNavy
-                    .ignoresSafeArea()
-                
-                List {
-                Section {
-                    if let user = supabase.currentUser {
-                        HStack {
-                            Image(systemName: "person.circle.fill")
-                                .font(.largeTitle)
-                                .foregroundStyle(.blue)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(user.email ?? "User")
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                
-                                Text("Plates Member")
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.6))
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-                .listRowBackground(Color.cardDark)
-                
-                Section("App") {
+            List {
+            Section {
+                if let user = supabase.currentUser {
                     HStack {
-                        Label("Version", systemImage: "info.circle")
-                            .foregroundStyle(.white)
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-                }
-                .listRowBackground(Color.cardDark)
-                
-                Section {
-                    Button(role: .destructive) {
-                        showingSignOutAlert = true
-                    } label: {
-                        if isSigningOut {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                Spacer()
-                            }
-                        } else {
-                            Label("Sign Out", systemImage: "arrow.right.square")
+                        Image(systemName: "person.circle.fill")
+                            .font(.largeTitle)
+                            .foregroundStyle(.blue)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(user.email ?? "User")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                            
+                            Text("Plates Member")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.6))
                         }
                     }
-                    .disabled(isSigningOut)
-                }
-                .listRowBackground(Color.cardDark)
+                    .padding(.vertical, 8)
                 }
             }
+            .listRowBackground(Color.cardDark)
+            
+            Section("App") {
+                HStack {
+                    Label("Version", systemImage: "info.circle")
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Text("1.0.0")
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .listRowBackground(Color.cardDark)
+            
+            Section {
+                Button(role: .destructive) {
+                    showingSignOutAlert = true
+                } label: {
+                    if isSigningOut {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    } else {
+                        Label("Sign Out", systemImage: "arrow.right.square")
+                    }
+                }
+                .disabled(isSigningOut)
+            }
+            .listRowBackground(Color.cardDark)
+            }
             .scrollContentBackground(.hidden)
+            .background(Color.backgroundNavy)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)

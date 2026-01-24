@@ -32,13 +32,11 @@ struct HistoryView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.backgroundNavy
-                    .ignoresSafeArea()
-                
+            Group {
                 if viewModel.isLoading {
                     ProgressView()
                         .tint(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.groupedWorkouts.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "clock.arrow.circlepath")
@@ -51,6 +49,7 @@ struct HistoryView: View {
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.5))
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 24) {
@@ -70,6 +69,7 @@ struct HistoryView: View {
                     }
                 }
             }
+            .background(Color.backgroundNavy)
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)

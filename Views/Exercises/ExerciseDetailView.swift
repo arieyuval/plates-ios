@@ -17,26 +17,22 @@ struct ExerciseDetailView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color.backgroundNavy
-                .ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 24) {
-                // Muscle group badge
-                HStack {
-                    Text(viewModel.exercise.muscleGroup.displayName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(viewModel.exercise.muscleGroup.color(for: colorScheme))
-                        .foregroundStyle(.white)
-                        .cornerRadius(8)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal)
+        ScrollView {
+            VStack(spacing: 24) {
+            // Muscle group badge
+            HStack {
+                Text(viewModel.exercise.muscleGroup.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.backgroundNavy)
+                    .foregroundStyle(.white)
+                    .cornerRadius(8)
+                
+                Spacer()
+            }
+            .padding(.horizontal)
                 
                 // Pinned Note
                 PinnedNoteSection(
@@ -98,7 +94,7 @@ struct ExerciseDetailView: View {
             }
             .padding(.vertical)
         }
-        }
+        .background(Color.backgroundNavy)
         .navigationTitle(viewModel.exercise.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(Color.backgroundNavy, for: .navigationBar)

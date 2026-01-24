@@ -41,7 +41,7 @@ struct ExerciseListView: View {
                         Spacer()
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: 16) {
+                            LazyVStack(spacing: 12) {
                                 ForEach(viewModel.filteredExercises) { exercise in
                                     ExerciseCardView(
                                         exercise: exercise,

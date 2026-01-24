@@ -53,7 +53,7 @@ struct SignInView: View {
                     
                     // Sign In Form
                     VStack(spacing: 16) {
-                        TextField("Email", text: $email)
+                        TextField("", text: $email, prompt: Text("Email").foregroundStyle(.white.opacity(0.6)))
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
@@ -62,7 +62,7 @@ struct SignInView: View {
                             .foregroundStyle(.white)
                             .cornerRadius(10)
                         
-                        SecureField("Password", text: $password)
+                        SecureField("", text: $password, prompt: Text("Password").foregroundStyle(.white.opacity(0.6)))
                             .textContentType(.password)
                             .padding()
                             .background(Color.cardDark)

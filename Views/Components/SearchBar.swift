@@ -13,11 +13,11 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.5))
             
-            TextField("Search exercises...", text: $text)
+            TextField("", text: $text, prompt: Text("Search exercises...").foregroundStyle(.white.opacity(0.6)))
                 .textFieldStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(.white.opacity(0.9))
                 .tint(.blue)
             
             if !text.isEmpty {
@@ -25,11 +25,11 @@ struct SearchBar: View {
                     text = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
         }
-        .padding(10)
+        .padding(12)
         .background(Color.cardDark)
         .cornerRadius(10)
     }

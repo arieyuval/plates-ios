@@ -23,14 +23,14 @@ struct ExerciseCardView: View {
         NavigationLink {
             ExerciseDetailView(exercise: exercise)
         } label: {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 // Header
                 HStack {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(exercise.name)
                             .font(.title3)
                             .fontWeight(.bold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.white.opacity(0.95))
                         
                         // Muscle group badge
                         Text(exercise.muscleGroup.displayName)
@@ -42,121 +42,114 @@ struct ExerciseCardView: View {
                     
                     Image(systemName: "chevron.right")
                         .font(.body)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.white.opacity(0.4))
                 }
                 
                 // Stats Row
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     // Last Session
                     if let lastSession = lastSession {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("Last Session")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.5))
                             Text(lastSession.displayText)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
+                                .font(.callout)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white.opacity(0.95))
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
+                        .padding(10)
                         .background(Color.statBoxDark)
-                        .cornerRadius(12)
+                        .cornerRadius(10)
                     }
                     
                     // Last Set
                     if let lastSet = lastSet {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("Last Set")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.5))
                             Text(lastSet.displayText)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
+                                .font(.callout)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white.opacity(0.95))
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
+                        .padding(10)
                         .background(Color.statBoxDark)
-                        .cornerRadius(12)
+                        .cornerRadius(10)
                     }
                     
                     // PR Box with accent color
                     if let currentPR = currentPR {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("\(exercise.defaultPRReps)RM PR")
-                                .font(.caption)
+                                .font(.caption2)
                                 .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
                             Text("\(Int(currentPR.weight)) lbs")
-                                .font(.title3)
-                                .fontWeight(.bold)
+                                .font(.callout)
+                                .fontWeight(.semibold)
                                 .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
+                        .padding(10)
                         .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.15))
-                        .cornerRadius(12)
+                        .cornerRadius(10)
                     }
                 }
                 
                 // Quick log form
                 if exercise.exerciseType == .strength {
-                    Divider()
-                        .background(Color.white.opacity(0.1))
-                    
-                    HStack(spacing: 12) {
-                        Text("Quick Log")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
-                        
-                        Spacer()
-                        
-                        TextField("Wt", text: $weight)
+                    HStack(spacing: 10) {
+                        TextField("", text: $weight, prompt: Text("Wt").foregroundStyle(.white.opacity(0.6)))
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.white)
-                            .frame(width: 80)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 70)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
                             .background(Color.statBoxDark)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
                             )
                         
                         Text("×")
-                            .foregroundStyle(.white.opacity(0.4))
-                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.callout)
                         
-                        TextField("Reps", text: $reps)
+                        TextField("", text: $reps, prompt: Text("Reps").foregroundStyle(.white.opacity(0.6)))
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.white)
-                            .frame(width: 80)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 70)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
                             .background(Color.statBoxDark)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
                             )
+                        
+                        Spacer()
                         
                         if showSuccess {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
-                                .font(.title2)
+                                .font(.title3)
                                 .transition(.scale.combined(with: .opacity))
                         } else {
                             Button {
                                 logSet()
                             } label: {
                                 Image(systemName: "plus")
-                                    .font(.title3)
+                                    .font(.callout)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.white)
-                                    .frame(width: 50, height: 50)
+                                    .frame(width: 44, height: 44)
                                     .background(Color.blue)
                                     .cornerRadius(8)
                             }
@@ -166,9 +159,9 @@ struct ExerciseCardView: View {
                     }
                 }
             }
-            .padding()
+            .padding(14)
             .background(Color.cardDark)
-            .cornerRadius(16)
+            .cornerRadius(12)
         }
         .buttonStyle(.plain)
     }

@@ -22,6 +22,7 @@ struct LogSetFormView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Log Set")
                 .font(.headline)
+                .foregroundStyle(.white.opacity(0.95))
             
             VStack(spacing: 12) {
                 if exercise.exerciseType == .strength {
@@ -30,19 +31,33 @@ struct LogSetFormView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Weight (lbs)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("0", text: $weight)
+                                .foregroundStyle(.white.opacity(0.7))
+                            TextField("", text: $weight, prompt: Text("0").foregroundStyle(.white.opacity(0.6)))
                                 .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
+                                .padding(12)
+                                .background(Color.statBoxDark)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Reps")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("0", text: $reps)
+                                .foregroundStyle(.white.opacity(0.7))
+                            TextField("", text: $reps, prompt: Text("0").foregroundStyle(.white.opacity(0.6)))
                                 .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
+                                .padding(12)
+                                .background(Color.statBoxDark)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         }
                     }
                 } else {
@@ -51,19 +66,33 @@ struct LogSetFormView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Distance (mi)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("0.0", text: $distance)
+                                .foregroundStyle(.white.opacity(0.7))
+                            TextField("", text: $distance, prompt: Text("0.0").foregroundStyle(.white.opacity(0.6)))
                                 .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
+                                .padding(12)
+                                .background(Color.statBoxDark)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Duration (min)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField("0", text: $duration)
+                                .foregroundStyle(.white.opacity(0.7))
+                            TextField("", text: $duration, prompt: Text("0").foregroundStyle(.white.opacity(0.6)))
                                 .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
+                                .padding(12)
+                                .background(Color.statBoxDark)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
                         }
                     }
                 }
@@ -72,10 +101,17 @@ struct LogSetFormView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Notes (optional)")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Add notes...", text: $notes, axis: .vertical)
+                        .foregroundStyle(.white.opacity(0.7))
+                    TextField("", text: $notes, prompt: Text("Add notes...").foregroundStyle(.white.opacity(0.6)), axis: .vertical)
                         .lineLimit(2...4)
-                        .textFieldStyle(.roundedBorder)
+                        .padding(12)
+                        .background(Color.statBoxDark)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        )
                 }
                 
                 // Submit button
@@ -105,7 +141,7 @@ struct LogSetFormView: View {
                 .disabled(!isValid || showSuccess)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.cardDark)
             .cornerRadius(12)
         }
         .padding(.horizontal)

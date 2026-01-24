@@ -23,7 +23,7 @@ struct AddExerciseView: View {
         NavigationStack {
             Form {
                 Section("Exercise Details") {
-                    TextField("Exercise Name", text: $name)
+                    TextField("", text: $name, prompt: Text("Exercise Name").foregroundStyle(.white.opacity(0.6)))
                     
                     Picker("Muscle Group", selection: $selectedMuscleGroup) {
                         ForEach(MuscleGroup.allCases.filter { $0 != .all }, id: \.self) { group in

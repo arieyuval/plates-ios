@@ -47,12 +47,12 @@ struct MuscleGroupTab: View {
                 .background(
                     isSelected
                         ? group.color(for: colorScheme)
-                        : Color(.systemGray6)
+                        : Color.cardDark
                 )
                 .foregroundStyle(
                     isSelected
                         ? .white
-                        : .primary
+                        : .white.opacity(0.85)
                 )
                 .cornerRadius(20)
         }

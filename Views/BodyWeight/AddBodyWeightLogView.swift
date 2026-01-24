@@ -21,14 +21,14 @@ struct AddBodyWeightLogView: View {
         NavigationStack {
             Form {
                 Section("Weight Entry") {
-                    TextField("Weight (lbs)", text: $weight)
+                    TextField("", text: $weight, prompt: Text("Weight (lbs)").foregroundStyle(.white.opacity(0.6)))
                         .keyboardType(.decimalPad)
                     
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                 }
                 
                 Section("Notes (Optional)") {
-                    TextField("Add notes...", text: $notes, axis: .vertical)
+                    TextField("", text: $notes, prompt: Text("Add notes...").foregroundStyle(.white.opacity(0.6)), axis: .vertical)
                         .lineLimit(3...6)
                 }
                 

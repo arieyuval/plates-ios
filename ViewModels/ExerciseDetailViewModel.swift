@@ -65,6 +65,15 @@ class ExerciseDetailViewModel: ObservableObject {
         }
     }
     
+    func updateSet(_ setId: UUID, weight: Double?, reps: Int?, distance: Double?, duration: Int?, notes: String?) async {
+        do {
+            try await supabase.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
+            await loadSets()
+        } catch {
+            errorMessage = "Failed to update set: \(error.localizedDescription)"
+        }
+    }
+    
     func savePinnedNote() async {
         do {
             let noteToSave = pinnedNote.isEmpty ? nil : pinnedNote

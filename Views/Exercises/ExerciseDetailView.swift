@@ -94,12 +94,16 @@ struct ExerciseDetailView: View {
                 // Set History
                 SetHistoryView(
                     groupedSets: viewModel.groupedSetsByDate,
-                    exercise: viewModel.exercise
-                ) { setId in
-                    Task {
-                        await viewModel.deleteSet(setId)
+                    exercise: viewModel.exercise,
+                    onDelete: { setId in
+                        Task {
+                            await viewModel.deleteSet(setId)
+                        }
+                    },
+                    onEdit: { setId, weight, reps, distance, duration, notes in
+                        await viewModel.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
                     }
-                }
+                )
             }
             .padding(.vertical)
         }

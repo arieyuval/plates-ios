@@ -9,11 +9,11 @@ import SwiftUI
 
 struct EditSetView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var viewModel: EditSetViewModel
+    @State private var viewModel: EditSetViewModel
     let onSave: (UUID, Double?, Int?, Double?, Int?, String?) async -> Void
     
     init(set: WorkoutSet, exercise: Exercise, onSave: @escaping (UUID, Double?, Int?, Double?, Int?, String?) async -> Void) {
-        _viewModel = StateObject(wrappedValue: EditSetViewModel(set: set, exercise: exercise))
+        _viewModel = State(wrappedValue: EditSetViewModel(set: set, exercise: exercise))
         self.onSave = onSave
     }
     
@@ -162,17 +162,18 @@ struct EditSetView: View {
 }
 
 @MainActor
-class EditSetViewModel: ObservableObject {
+@Observable
+final class EditSetViewModel {
     let set: WorkoutSet
     let exercise: Exercise
     
-    @Published var weight: Double?
-    @Published var reps: Int?
-    @Published var distance: Double?
-    @Published var duration: Int?
-    @Published var notes: String
-    @Published var error: String?
-    @Published var isSaving = false
+    var weight: Double?
+    var reps: Int?
+    var distance: Double?
+    var duration: Int?
+    var notes: String
+    var error: String?
+    var isSaving = false
     
     init(set: WorkoutSet, exercise: Exercise) {
         self.set = set

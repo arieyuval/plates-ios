@@ -11,8 +11,10 @@ struct SetHistoryView: View {
     let groupedSets: [(date: Date, sets: [WorkoutSet])]
     let exercise: Exercise
     let onDelete: (UUID) -> Void
+    let onEdit: ((UUID, Double?, Int?, Double?, Int?, String?) async -> Void)?
     
     @State private var expandedDates: Set<Date> = []
+    @State private var editingSet: WorkoutSet?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -44,9 +46,17 @@ struct SetHistoryView: View {
                                 expandedDates.insert(group.date)
                             }
                         },
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onEdit: { set in
+                            editingSet = set
+                        }
                     )
                 }
+            }
+        }
+        .sheet(item: $editingSet) { set in
+            if let onEdit = onEdit {
+                EditSetView(set: set, exercise: exercise, onSave: onEdit)
             }
         }
     }
@@ -59,6 +69,7 @@ struct CollapsibleDayGroup: View {
     let isExpanded: Bool
     let onToggle: () -> Void
     let onDelete: (UUID) -> Void
+    let onEdit: (WorkoutSet) -> Void
     
     // Get the top set for the day (heaviest for strength, longest distance for cardio)
     private var topSet: WorkoutSet? {
@@ -83,66 +94,75 @@ struct CollapsibleDayGroup: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top set row with new layout: date | notes | set info | arrow
+            // Top set row with new layout: date | notes | set info | edit | delete | arrow
             if let topSet = topSet {
-                Button(action: {
-                    if !remainingSets.isEmpty {
-                        onToggle()
+                HStack(alignment: .center, spacing: 12) {
+                    // Date on the left
+                    Text(topSet.date.toLocalTime(), style: .date)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 60, alignment: .leading)
+                    
+                    // Notes in the middle (or placeholder)
+                    if let notes = topSet.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text("—")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.3))
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                }) {
-                    HStack(alignment: .center, spacing: 12) {
-                        // Date on the left
-                        Text(topSet.date.toLocalTime(), style: .date)
+                    
+                    // Set info on the right
+                    Text(topSet.displayText(usesBodyWeight: exercise.usesBodyWeight))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white.opacity(0.95))
+                    
+                    // Edit button
+                    Button {
+                        onEdit(topSet)
+                    } label: {
+                        Image(systemName: "pencil")
                             .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .frame(width: 60, alignment: .leading)
-                        
-                        // Notes in the middle (or placeholder)
-                        if let notes = topSet.notes, !notes.isEmpty {
-                            Text(notes)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("—")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.3))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        
-                        // Set info on the right
-                        Text(topSet.displayText(usesBodyWeight: exercise.usesBodyWeight))
+                            .foregroundStyle(.blue)
+                            .frame(width: 24, height: 24)
+                    }
+                    
+                    // Delete button
+                    Button {
+                        onDelete(topSet.id)
+                    } label: {
+                        Image(systemName: "trash")
                             .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white.opacity(0.95))
-                            .frame(alignment: .trailing)
-                        
-                        // Arrow (only if there are more sets)
-                        if !remainingSets.isEmpty {
+                            .foregroundStyle(.red)
+                            .frame(width: 24, height: 24)
+                    }
+                    
+                    // Arrow (only if there are more sets)
+                    if !remainingSets.isEmpty {
+                        Button {
+                            onToggle()
+                        } label: {
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.5))
                                 .frame(width: 20)
-                        } else {
-                            Color.clear.frame(width: 20)
                         }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                    .background(Color.cardDark)
-                    .cornerRadius(8)
-                    .padding(.horizontal)
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        onDelete(topSet.id)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+                    } else {
+                        Color.clear.frame(width: 20)
                     }
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                .background(Color.cardDark)
+                .cornerRadius(8)
+                .padding(.horizontal)
             }
             
             // Remaining sets (collapsible) with same layout
@@ -174,7 +194,26 @@ struct CollapsibleDayGroup: View {
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.white.opacity(0.85))
-                            .frame(alignment: .trailing)
+                        
+                        // Edit button
+                        Button {
+                            onEdit(set)
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                                .frame(width: 24, height: 24)
+                        }
+                        
+                        // Delete button
+                        Button {
+                            onDelete(set.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .frame(width: 24, height: 24)
+                        }
                         
                         Color.clear.frame(width: 20)
                     }
@@ -182,13 +221,6 @@ struct CollapsibleDayGroup: View {
                     .padding(.vertical, 10)
                     .background(Color.cardDark.opacity(0.7))
                     .padding(.horizontal)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            onDelete(set.id)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
                 }
             }
         }

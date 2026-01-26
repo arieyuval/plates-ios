@@ -72,4 +72,17 @@ class HistoryViewModel: ObservableObject {
     func exerciseName(for exerciseId: UUID) -> String {
         exercises[exerciseId]?.name ?? "Unknown Exercise"
     }
+    
+    func getExercise(for exerciseId: UUID) -> Exercise? {
+        exercises[exerciseId]
+    }
+    
+    func updateSet(_ setId: UUID, weight: Double?, reps: Int?, distance: Double?, duration: Int?, notes: String?) async {
+        do {
+            try await supabase.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
+            await loadData()
+        } catch {
+            errorMessage = "Failed to update set: \(error.localizedDescription)"
+        }
+    }
 }

@@ -229,6 +229,88 @@ class SupabaseManager: ObservableObject {
         return exercise
     }
     
+    /// Fetch all exercises for autocomplete
+    func fetchAllExercises() async throws -> [Exercise] {
+        let exercises: [Exercise] = try await client.from("exercises")
+            .select()
+            .execute()
+            .value
+        
+        return exercises
+    }
+    
+    /// Add exercise (create new or link existing) with full configuration
+    func addExercise(
+        name: String,
+        muscleGroup: MuscleGroup,
+        exerciseType: ExerciseType,
+        defaultPRReps: Int,
+        usesBodyWeight: Bool
+    ) async throws -> Exercise {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        // Step 1: Check if exercise with same name and muscle group exists
+        let existingExercises: [Exercise] = try await client.from("exercises")
+            .select()
+            .eq("name", value: name)
+            .eq("muscle_group", value: muscleGroup.rawValue)
+            .execute()
+            .value
+        
+        let exercise: Exercise
+        
+        if let existing = existingExercises.first {
+            // Exercise exists, use it
+            exercise = existing
+        } else {
+            // Create new exercise
+            struct ExerciseInsert: Encodable {
+                let name: String
+                let muscle_group: String
+                let exercise_type: String
+                let is_base: Bool
+                let default_pr_reps: Int
+                let uses_body_weight: Bool
+            }
+            
+            let exerciseData = ExerciseInsert(
+                name: name,
+                muscle_group: muscleGroup.rawValue,
+                exercise_type: exerciseType.rawValue,
+                is_base: false,
+                default_pr_reps: defaultPRReps,
+                uses_body_weight: usesBodyWeight
+            )
+            
+            exercise = try await client.from("exercises")
+                .insert(exerciseData)
+                .select()
+                .single()
+                .execute()
+                .value
+        }
+        
+        // Step 2: Link to user (upsert to avoid duplicates)
+        struct UserExerciseLink: Encodable {
+            let user_id: String
+            let exercise_id: String
+        }
+        
+        let linkData = UserExerciseLink(
+            user_id: userId.uuidString,
+            exercise_id: exercise.id.uuidString
+        )
+        
+        try await client.from("user_exercises")
+            .upsert(linkData)
+            .execute()
+        
+        return exercise
+    }
+
+    
     func updatePinnedNote(exerciseId: UUID, note: String?) async throws {
         struct PinnedNoteUpdate: Encodable {
             let pinned_note: String?

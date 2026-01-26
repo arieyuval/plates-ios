@@ -10,14 +10,9 @@ import Combine
 
 // MARK: - Date Extension for Timezone Conversion
 extension Date {
-    /// Converts UTC date to user's local timezone (defaults to PST if system timezone not available)
+    /// Converts UTC date to user's local timezone
     func toLocalTime() -> Date {
-        // Try to get the user's current timezone, fall back to PST
-        let userTimezone = TimeZone.current
-        let pstTimezone = TimeZone(identifier: "America/Los_Angeles") ?? TimeZone.current
-        
-        // Use current timezone first, PST as fallback
-        let timezone = userTimezone
+        let timezone = TimeZone.current
         
         let sourceOffset = TimeZone(identifier: "UTC")?.secondsFromGMT(for: self) ?? 0
         let destinationOffset = timezone.secondsFromGMT(for: self)
@@ -29,9 +24,23 @@ extension Date {
 
 struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
+    @State private var editingSetInfo: EditingSetInfo?
+    @State private var navigationPath = NavigationPath()
+    
+    struct EditingSetInfo: Identifiable {
+        let id: UUID
+        let set: WorkoutSet
+        let exercise: Exercise
+        
+        init(set: WorkoutSet, exercise: Exercise) {
+            self.id = set.id
+            self.set = set
+            self.exercise = exercise
+        }
+    }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if viewModel.isLoading {
                     ProgressView()
@@ -61,6 +70,12 @@ struct HistoryView: View {
                                         Task {
                                             await viewModel.deleteSet(setId)
                                         }
+                                    },
+                                    onEdit: { set in
+                                        // Find the exercise for this set
+                                        if let exercise = viewModel.getExercise(for: set.exerciseId) {
+                                            editingSetInfo = EditingSetInfo(set: set, exercise: exercise)
+                                        }
                                     }
                                 )
                             }
@@ -81,6 +96,11 @@ struct HistoryView: View {
             .refreshable {
                 await viewModel.loadData()
             }
+            .sheet(item: $editingSetInfo) { info in
+                EditSetView(set: info.set, exercise: info.exercise) { setId, weight, reps, distance, duration, notes in
+                    await viewModel.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
+                }
+            }
         }
     }
 }
@@ -89,6 +109,7 @@ struct WorkoutDayCard: View {
     let workout: HistoryViewModel.WorkoutDay
     let exerciseName: (UUID) -> String
     let onDelete: (UUID) -> Void
+    let onEdit: (WorkoutSet) -> Void
     
     @State private var isExpanded = false
     @State private var expandedExercises: Set<UUID> = []
@@ -158,7 +179,8 @@ struct WorkoutDayCard: View {
                                 expandedExercises.insert(group.exerciseId)
                             }
                         },
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onEdit: onEdit
                     )
                 }
             }
@@ -175,6 +197,7 @@ struct ExerciseGroupView: View {
     let isExpanded: Bool
     let onToggle: () -> Void
     let onDelete: (UUID) -> Void
+    let onEdit: (WorkoutSet) -> Void
     
     // Get the top set for the exercise (heaviest for strength, longest distance for cardio)
     private var topSet: WorkoutSet? {
@@ -214,62 +237,71 @@ struct ExerciseGroupView: View {
                     .padding(.top, 4)
             }
             
-            // Top set (always visible) with new layout: date | notes | set info | arrow
+            // Top set (always visible) with new layout: date | notes | set info | edit | delete | arrow
             if let topSet = topSet {
-                Button(action: {
-                    if !remainingSets.isEmpty {
-                        onToggle()
-                    }
-                }) {
-                    HStack(alignment: .center, spacing: 8) {
-                        // Date on the left
-                        Text(topSet.date.toLocalTime(), style: .time)
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .frame(width: 50, alignment: .leading)
-                        
-                        // Notes in the middle (or placeholder)
-                        if let notes = topSet.notes, !notes.isEmpty {
-                            Text(notes)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.6))
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("—")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.3))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        
-                        // Set info on the right
-                        Text(topSet.displayText)
+                HStack(alignment: .center, spacing: 8) {
+                    // Date on the left
+                    Text(topSet.date.toLocalTime(), style: .time)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                        .frame(width: 50, alignment: .leading)
+                    
+                    // Notes in the middle (or placeholder)
+                    if let notes = topSet.notes, !notes.isEmpty {
+                        Text(notes)
                             .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .frame(alignment: .trailing)
-                        
-                        // Arrow (only if there are more sets)
-                        if !remainingSets.isEmpty {
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text("—")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.3))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    // Set info on the right
+                    Text(topSet.displayText)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white.opacity(0.85))
+                    
+                    // Edit button
+                    Button {
+                        onEdit(topSet)
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                            .frame(width: 24, height: 24)
+                    }
+                    
+                    // Delete button
+                    Button {
+                        onDelete(topSet.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .frame(width: 24, height: 24)
+                    }
+                    
+                    // Arrow (only if there are more sets)
+                    if !remainingSets.isEmpty {
+                        Button {
+                            onToggle()
+                        } label: {
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.5))
                                 .frame(width: 16)
-                        } else {
-                            Color.clear.frame(width: 16)
                         }
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        onDelete(topSet.id)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+                    } else {
+                        Color.clear.frame(width: 16)
                     }
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 6)
             }
             
             // Remaining sets (collapsible) with same layout
@@ -301,19 +333,31 @@ struct ExerciseGroupView: View {
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.white.opacity(0.7))
-                            .frame(alignment: .trailing)
+                        
+                        // Edit button
+                        Button {
+                            onEdit(set)
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                                .frame(width: 24, height: 24)
+                        }
+                        
+                        // Delete button
+                        Button {
+                            onDelete(set.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .frame(width: 24, height: 24)
+                        }
                         
                         Color.clear.frame(width: 16)
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 6)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            onDelete(set.id)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
                 }
             }
         }

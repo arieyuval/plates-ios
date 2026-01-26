@@ -43,19 +43,23 @@ struct WorkoutSet: Identifiable, Codable, Hashable {
         return "Invalid set"
     }
     
-    /// Display text for body weight exercises
+    /// Format set display text with body weight support
     func displayText(usesBodyWeight: Bool) -> String {
         if isStrength, let weight = weight, let reps = reps {
-            if usesBodyWeight {
-                let weightStr = weight > 0 ? "BW + \(Int(weight))" : "BW"
-                return "\(weightStr) × \(reps)"
-            } else {
-                return "\(Int(weight)) lbs × \(reps)"
-            }
+            let weightText = formatWeight(weight, usesBodyWeight: usesBodyWeight)
+            return "\(weightText) × \(reps)"
         } else if isCardio, let distance = distance, let duration = duration {
             return "\(String(format: "%.2f", distance)) mi • \(duration) min"
         }
         return "Invalid set"
+    }
+    
+    /// Format weight for display
+    private func formatWeight(_ weight: Double, usesBodyWeight: Bool) -> String {
+        if !usesBodyWeight {
+            return "\(Int(weight)) lbs"
+        }
+        return weight > 0 ? "BW + \(Int(weight)) lbs" : "BW"
     }
 
     enum CodingKeys: String, CodingKey {

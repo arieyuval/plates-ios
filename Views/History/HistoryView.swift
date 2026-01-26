@@ -87,14 +87,20 @@ struct HistoryView: View {
             .background(Color.backgroundNavy)
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
                 await viewModel.loadData()
             }
             .refreshable {
-                await viewModel.loadData()
+                await viewModel.forceRefresh()
+            }
+            .onAppear {
+                // Visibility-based refresh: only refresh if data is stale
+                Task {
+                    await WorkoutDataStore.shared.refreshIfStale()
+                }
             }
             .sheet(item: $editingSetInfo) { info in
                 EditSetView(set: info.set, exercise: info.exercise) { setId, weight, reps, distance, duration, notes in

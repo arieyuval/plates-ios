@@ -110,14 +110,14 @@ struct ExerciseDetailView: View {
         .background(Color.backgroundNavy)
         .navigationTitle(viewModel.exercise.name)
         .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task {
             await viewModel.loadSets()
         }
         .refreshable {
-            await viewModel.loadSets()
+            await viewModel.forceRefresh()
         }
     }
 }

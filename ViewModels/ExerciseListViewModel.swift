@@ -11,15 +11,25 @@ import Combine
 
 @MainActor
 class ExerciseListViewModel: ObservableObject {
-    @Published var exercises: [Exercise] = []
-    @Published var allSets: [UUID: [WorkoutSet]] = [:]
     @Published var selectedMuscleGroup: MuscleGroup = .all
     @Published var searchText = ""
-    @Published var isLoading = false
-    @Published var errorMessage: String?
     @Published var showingAddExercise = false
     
-    private let supabase = SupabaseManager.shared
+    private let dataStore = WorkoutDataStore.shared
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Computed properties that read from the global store
+    var exercises: [Exercise] {
+        dataStore.exercises
+    }
+    
+    var isLoading: Bool {
+        dataStore.isLoading
+    }
+    
+    var errorMessage: String? {
+        dataStore.errorMessage
+    }
     
     var filteredExercises: [Exercise] {
         var result = exercises
@@ -46,54 +56,39 @@ class ExerciseListViewModel: ObservableObject {
         return result
     }
     
-    func loadData() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            // Load exercises
-            exercises = try await supabase.fetchExercises()
-            
-            // Load sets for each exercise
-            for exercise in exercises {
-                let sets = try await supabase.fetchSets(for: exercise.id)
-                allSets[exercise.id] = sets
-            }
-        } catch {
-            errorMessage = "Failed to load exercises: \(error.localizedDescription)"
-        }
-        
-        isLoading = false
+    init() {
+        // Subscribe to data store changes to trigger UI updates
+        dataStore.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
     }
     
-    func getSets(for exerciseId: UUID) -> [WorkoutSet] {
-        allSets[exerciseId] ?? []
+    func loadData() async {
+        await dataStore.fetchAllData(force: false)
+    }
+    
+    func forceRefresh() async {
+        await dataStore.fetchAllData(force: true)
     }
     
     func getLastSession(for exerciseId: UUID) -> WorkoutSet? {
-        let sets = getSets(for: exerciseId)
-        return WorkoutCalculations.getLastSessionTopSet(sets: sets)
+        dataStore.getLastSession(for: exerciseId)
     }
     
     func getLastSet(for exerciseId: UUID) -> WorkoutSet? {
-        let sets = getSets(for: exerciseId)
-        return WorkoutCalculations.getLastSet(sets: sets)
+        dataStore.getLastSet(for: exerciseId)
     }
     
     func getCurrentPR(for exerciseId: UUID, exercise: Exercise) -> PersonalRecord? {
-        let sets = getSets(for: exerciseId)
-        return WorkoutCalculations.getPR(for: sets, repTarget: exercise.defaultPRReps)
+        dataStore.getCurrentPR(for: exerciseId, repTarget: exercise.defaultPRReps)
     }
     
     func quickLogSet(exerciseId: UUID, weight: Double, reps: Int) async {
         do {
-            try await supabase.logSet(exerciseId: exerciseId, weight: weight, reps: reps)
-            
-            // Refresh sets for this exercise
-            let updatedSets = try await supabase.fetchSets(for: exerciseId)
-            allSets[exerciseId] = updatedSets
+            try await dataStore.logSet(exerciseId: exerciseId, weight: weight, reps: reps)
         } catch {
-            errorMessage = "Failed to log set: \(error.localizedDescription)"
+            // Error is already set in dataStore
+            print("Failed to log set: \(error)")
         }
     }
 }

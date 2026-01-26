@@ -11,18 +11,31 @@ import Combine
 
 @MainActor
 class HistoryViewModel: ObservableObject {
-    @Published var allSets: [WorkoutSet] = []
-    @Published var exercises: [UUID: Exercise] = [:]
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private let supabase = SupabaseManager.shared
+    private let dataStore = WorkoutDataStore.shared
+    private var cancellables = Set<AnyCancellable>()
     
     struct WorkoutDay: Identifiable {
         let id = UUID()
         let date: Date
         let label: String
         let sets: [WorkoutSet]
+    }
+    
+    // Computed properties that read from global store
+    var allSets: [WorkoutSet] {
+        dataStore.allSets
+    }
+    
+    var exercises: [UUID: Exercise] {
+        dataStore.exerciseDict
+    }
+    
+    var isLoading: Bool {
+        dataStore.isLoading
+    }
+    
+    var errorMessage: String? {
+        dataStore.errorMessage
     }
     
     var groupedWorkouts: [WorkoutDay] {
@@ -43,29 +56,31 @@ class HistoryViewModel: ObservableObject {
         .sorted { $0.date > $1.date }
     }
     
+    init() {
+        // Subscribe to data store changes
+        dataStore.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
+    }
+    
     func loadData() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            allSets = try await supabase.fetchAllSets()
-            
-            // Load exercise details
-            let exerciseList = try await supabase.fetchExercises()
-            exercises = Dictionary(uniqueKeysWithValues: exerciseList.map { ($0.id, $0) })
-        } catch {
-            errorMessage = "Failed to load history: \(error.localizedDescription)"
-        }
-        
-        isLoading = false
+        await dataStore.fetchAllData(force: false)
+    }
+    
+    func forceRefresh() async {
+        await dataStore.fetchAllData(force: true)
     }
     
     func deleteSet(_ setId: UUID) async {
+        // Find which exercise this set belongs to
+        guard let exerciseId = allSets.first(where: { $0.id == setId })?.exerciseId else {
+            return
+        }
+        
         do {
-            try await supabase.deleteSet(setId)
-            await loadData()
+            try await dataStore.deleteSet(setId, exerciseId: exerciseId)
         } catch {
-            errorMessage = "Failed to delete set: \(error.localizedDescription)"
+            print("Failed to delete set: \(error)")
         }
     }
     
@@ -78,11 +93,23 @@ class HistoryViewModel: ObservableObject {
     }
     
     func updateSet(_ setId: UUID, weight: Double?, reps: Int?, distance: Double?, duration: Int?, notes: String?) async {
+        // Find which exercise this set belongs to
+        guard let exerciseId = allSets.first(where: { $0.id == setId })?.exerciseId else {
+            return
+        }
+        
         do {
-            try await supabase.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
-            await loadData()
+            try await dataStore.updateSet(
+                setId,
+                exerciseId: exerciseId,
+                weight: weight,
+                reps: reps,
+                distance: distance,
+                duration: duration,
+                notes: notes
+            )
         } catch {
-            errorMessage = "Failed to update set: \(error.localizedDescription)"
+            print("Failed to update set: \(error)")
         }
     }
 }

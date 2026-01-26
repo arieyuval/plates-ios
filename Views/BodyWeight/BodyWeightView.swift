@@ -63,8 +63,8 @@ struct BodyWeightView: View {
             .background(Color.backgroundNavy)
             .navigationTitle("Body Weight")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $viewModel.showingAddLog) {
                 AddBodyWeightLogView { weight, date, notes in
@@ -150,12 +150,14 @@ struct BodyWeightChartView: View {
     let goalWeight: Double?
     
     // Check if current weight equals goal weight
+    // chartData is sorted most recent first, so check the first item
     private var isAtGoal: Bool {
         guard let goal = goalWeight,
               let currentWeight = chartData.first?.weight else {
             return false
         }
-        return abs(currentWeight - goal) < 0.1 // Within 0.1 lbs tolerance
+        // Within 1 lb tolerance (rounded to nearest int)
+        return abs(Int(currentWeight) - Int(goal)) <= 0
     }
     
     // Color for weight line

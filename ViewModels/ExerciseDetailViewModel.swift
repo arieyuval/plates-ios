@@ -12,36 +12,47 @@ import Combine
 @MainActor
 class ExerciseDetailViewModel: ObservableObject {
     @Published var exercise: Exercise
-    @Published var sets: [WorkoutSet] = []
     @Published var selectedRepTarget = 1
     @Published var pinnedNote = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let supabase = SupabaseManager.shared
+    private let dataStore = WorkoutDataStore.shared
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Computed property that reads from global store
+    var sets: [WorkoutSet] {
+        dataStore.getSets(for: exercise.id)
+    }
     
     init(exercise: Exercise) {
         self.exercise = exercise
         self.selectedRepTarget = exercise.defaultPRReps
         self.pinnedNote = exercise.pinnedNote ?? ""
+        
+        // Subscribe to data store changes
+        dataStore.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }.store(in: &cancellables)
     }
     
     func loadSets() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            sets = try await supabase.fetchSets(for: exercise.id)
-        } catch {
-            errorMessage = "Failed to load sets: \(error.localizedDescription)"
+        // Use cached data if available and fresh, otherwise fetch
+        if dataStore.exercises.isEmpty || dataStore.isStale {
+            await dataStore.fetchAllData(force: false)
+        } else {
+            // Data is already cached and fresh
+            print("📦 Using cached data for exercise detail")
         }
-        
-        isLoading = false
+    }
+    
+    func forceRefresh() async {
+        await dataStore.refreshExerciseSets(exercise.id)
     }
     
     func logSet(weight: Double?, reps: Int?, distance: Double?, duration: Int?, notes: String?) async {
         do {
-            try await supabase.logSet(
+            try await dataStore.logSet(
                 exerciseId: exercise.id,
                 weight: weight,
                 reps: reps,
@@ -49,8 +60,6 @@ class ExerciseDetailViewModel: ObservableObject {
                 duration: duration,
                 notes: notes
             )
-            
-            await loadSets()
         } catch {
             errorMessage = "Failed to log set: \(error.localizedDescription)"
         }
@@ -58,8 +67,7 @@ class ExerciseDetailViewModel: ObservableObject {
     
     func deleteSet(_ setId: UUID) async {
         do {
-            try await supabase.deleteSet(setId)
-            await loadSets()
+            try await dataStore.deleteSet(setId, exerciseId: exercise.id)
         } catch {
             errorMessage = "Failed to delete set: \(error.localizedDescription)"
         }
@@ -67,8 +75,15 @@ class ExerciseDetailViewModel: ObservableObject {
     
     func updateSet(_ setId: UUID, weight: Double?, reps: Int?, distance: Double?, duration: Int?, notes: String?) async {
         do {
-            try await supabase.updateSet(setId, weight: weight, reps: reps, distance: distance, duration: duration, notes: notes)
-            await loadSets()
+            try await dataStore.updateSet(
+                setId,
+                exerciseId: exercise.id,
+                weight: weight,
+                reps: reps,
+                distance: distance,
+                duration: duration,
+                notes: notes
+            )
         } catch {
             errorMessage = "Failed to update set: \(error.localizedDescription)"
         }
@@ -77,7 +92,7 @@ class ExerciseDetailViewModel: ObservableObject {
     func savePinnedNote() async {
         do {
             let noteToSave = pinnedNote.isEmpty ? nil : pinnedNote
-            try await supabase.updatePinnedNote(exerciseId: exercise.id, note: noteToSave)
+            try await dataStore.updatePinnedNote(exerciseId: exercise.id, note: noteToSave)
             exercise.pinnedNote = noteToSave
         } catch {
             errorMessage = "Failed to save note: \(error.localizedDescription)"

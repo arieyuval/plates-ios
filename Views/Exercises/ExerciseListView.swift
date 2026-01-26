@@ -57,8 +57,8 @@ struct ExerciseListView: View {
             .background(Color.backgroundNavy)
             .navigationTitle("Exercises")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -81,7 +81,13 @@ struct ExerciseListView: View {
                 await viewModel.loadData()
             }
             .refreshable {
-                await viewModel.loadData()
+                await viewModel.forceRefresh()
+            }
+            .onAppear {
+                // Visibility-based refresh: only refresh if data is stale
+                Task {
+                    await WorkoutDataStore.shared.refreshIfStale()
+                }
             }
         }
     }

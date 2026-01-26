@@ -20,43 +20,66 @@ struct AddBodyWeightLogView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Weight Entry") {
-                    TextField("", text: $weight, prompt: Text("Weight (lbs)").foregroundStyle(.white.opacity(0.6)))
-                        .keyboardType(.decimalPad)
+                Section {
+                    HStack {
+                        Text("Weight")
+                            .foregroundStyle(.white.opacity(0.6))
+                        Spacer()
+                        TextField("", text: $weight, prompt: Text("0").foregroundStyle(.white.opacity(0.5)))
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 100)
+                        Text("lbs")
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
                     
                     DatePicker("Date", selection: $date, displayedComponents: .date)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .tint(.blue)
+                } header: {
+                    Text("Weight Entry")
+                        .foregroundStyle(.white.opacity(0.6))
                 }
-                
-                Section("Notes (Optional)") {
-                    TextField("", text: $notes, prompt: Text("Add notes...").foregroundStyle(.white.opacity(0.6)), axis: .vertical)
-                        .lineLimit(3...6)
-                }
+                .listRowBackground(Color.statBoxDark)
                 
                 Section {
-                    Button {
-                        logWeight()
-                    } label: {
-                        if isLoading {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                Spacer()
-                            }
-                        } else {
-                            Text("Log Weight")
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .disabled(weight.isEmpty || isLoading)
+                    TextField("", text: $notes, prompt: Text("Add notes...").foregroundStyle(.white.opacity(0.5)), axis: .vertical)
+                        .lineLimit(3...6)
+                        .foregroundStyle(.white.opacity(0.9))
+                } header: {
+                    Text("Notes (Optional)")
+                        .foregroundStyle(.white.opacity(0.6))
                 }
+                .listRowBackground(Color.statBoxDark)
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.backgroundNavy)
             .navigationTitle("Log Weight")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundStyle(.white)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        logWeight()
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Save")
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .disabled(weight.isEmpty || isLoading)
                 }
             }
         }

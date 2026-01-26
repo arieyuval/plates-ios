@@ -26,11 +26,24 @@ struct BodyWeightView: View {
                         }
                     )
                     
+                    // Goal Weight Card
+                    BodyWeightGoalCardView(
+                        currentWeight: viewModel.currentWeight,
+                        goalWeight: viewModel.goalWeight,
+                        startingWeight: viewModel.startingWeight,
+                        onSave: { goalWeight in
+                            Task {
+                                await viewModel.updateGoalWeight(goalWeight)
+                            }
+                        }
+                    )
+                    
                     // Progress chart
                     if !viewModel.logs.isEmpty {
                         BodyWeightChartView(
                             chartData: viewModel.chartData,
-                            goalWeight: viewModel.goalWeight
+                            goalWeight: viewModel.goalWeight,
+                            startingWeight: viewModel.startingWeight
                         )
                     }
                     
@@ -148,85 +161,130 @@ struct StatCard: View {
 struct BodyWeightChartView: View {
     let chartData: [(date: Date, weight: Double)]
     let goalWeight: Double?
+    let startingWeight: Double?
     
-    // Check if current weight equals goal weight
-    // chartData is sorted most recent first, so check the first item
-    private var isAtGoal: Bool {
+    private var currentWeight: Double? {
+        chartData.first?.weight
+    }
+    
+    private var goalReached: Bool {
         guard let goal = goalWeight,
-              let currentWeight = chartData.first?.weight else {
+              let current = currentWeight,
+              let starting = startingWeight else {
             return false
         }
-        // Within 1 lb tolerance (rounded to nearest int)
-        return abs(Int(currentWeight) - Int(goal)) <= 0
+        
+        // Determine if user is trying to lose or gain weight
+        let isLosingWeight = goal < starting
+        
+        if isLosingWeight {
+            // Goal reached if current weight is at or below goal
+            return current <= goal
+        } else {
+            // Goal reached if current weight is at or above goal
+            return current >= goal
+        }
     }
     
-    // Color for weight line
-    private var weightLineColor: Color {
-        isAtGoal ? .green : .blue
-    }
-    
-    // Color for goal line
-    private var goalLineColor: Color {
-        isAtGoal ? .green : .purple
+    private var yAxisDomain: ClosedRange<Double> {
+        guard !chartData.isEmpty else {
+            return 0...200
+        }
+        
+        let dataMin = chartData.map(\.weight).min() ?? 0
+        let dataMax = chartData.map(\.weight).max() ?? 200
+        
+        // Include goal weight in domain if it exists
+        if let goal = goalWeight {
+            let min = min(dataMin, goal)
+            let max = max(dataMax, goal)
+            let padding = (max - min) * 0.1
+            return (min - padding)...(max + padding)
+        } else {
+            let padding = (dataMax - dataMin) * 0.1
+            return (dataMin - padding)...(dataMax + padding)
+        }
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Progress")
                 .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal)
+                .foregroundStyle(.white.opacity(0.95))
             
-            Chart {
-                // Weight line
-                ForEach(chartData, id: \.date) { dataPoint in
-                    LineMark(
-                        x: .value("Date", dataPoint.date),
-                        y: .value("Weight", dataPoint.weight)
-                    )
-                    .foregroundStyle(weightLineColor)
+            if chartData.isEmpty {
+                Text("No weight logs yet")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.5))
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.cardDark)
+                    .cornerRadius(12)
+            } else {
+                Chart {
+                    // Goal reference line
+                    if let goal = goalWeight {
+                        RuleMark(y: .value("Goal", goal))
+                            .foregroundStyle(goalReached ? Color.green : Color(hex: "3B82F6"))
+                            .lineStyle(StrokeStyle(
+                                lineWidth: 2,
+                                dash: goalReached ? [] : [5, 5]
+                            ))
+                            .annotation(position: .trailing, alignment: .trailing) {
+                                Text("Goal: \(Int(goal))")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(goalReached ? .green : Color(hex: "3B82F6"))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.cardDark.opacity(0.9))
+                                    .cornerRadius(4)
+                            }
+                    }
                     
-                    PointMark(
-                        x: .value("Date", dataPoint.date),
-                        y: .value("Weight", dataPoint.weight)
-                    )
-                    .foregroundStyle(weightLineColor)
+                    // Weight line and points
+                    ForEach(chartData, id: \.date) { dataPoint in
+                        LineMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Weight", dataPoint.weight)
+                        )
+                        .foregroundStyle(goalReached ? Color.green : Color.blue)
+                        
+                        PointMark(
+                            x: .value("Date", dataPoint.date),
+                            y: .value("Weight", dataPoint.weight)
+                        )
+                        .foregroundStyle(goalReached ? Color.green : Color.blue)
+                    }
                 }
-                
-                // Goal line
-                if let goal = goalWeight {
-                    RuleMark(y: .value("Goal", goal))
-                        .foregroundStyle(goalLineColor.opacity(0.5))
-                        .lineStyle(StrokeStyle(
-                            lineWidth: 2,
-                            dash: isAtGoal ? [] : [5, 5] // Solid if at goal, dashed otherwise
-                        ))
-                }
-            }
-            .frame(height: 250)
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let weight = value.as(Double.self) {
-                            Text("\(Int(weight))")
-                                .foregroundStyle(.white)
+                .frame(height: 250)
+                .chartYScale(domain: yAxisDomain)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                            .foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel {
+                            if let weight = value.as(Double.self) {
+                                Text("\(Int(weight))")
+                                    .foregroundStyle(.white.opacity(0.7))
+                            }
                         }
                     }
                 }
-            }
-            .chartXAxis {
-                AxisMarks { value in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.month().day())
-                        .foregroundStyle(.white)
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                            .foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel(format: .dateTime.month().day())
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
                 }
+                .padding()
+                .background(Color.cardDark)
+                .cornerRadius(12)
             }
-            .padding()
-            .background(Color.cardDark)
-            .cornerRadius(12)
-            .padding(.horizontal)
         }
+        .padding(.horizontal)
     }
 }
 

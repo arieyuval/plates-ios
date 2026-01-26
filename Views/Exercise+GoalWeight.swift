@@ -5,6 +5,9 @@
 //  Code snippets for adding goal weight support
 //  Created on 1/26/26.
 //
+//  ⚠️ THIS IS A REFERENCE FILE - NOT ACTUAL CODE
+//  Copy the snippets below into the appropriate files
+//
 
 /*
  ============================================
@@ -12,15 +15,13 @@
  ============================================
  
  Add this property to your Exercise struct:
- */
+ 
+ In Exercise.swift, add to the struct properties:
+     let goalWeight: Double?
 
-// In Exercise.swift, add to the struct properties:
-let goalWeight: Double?
+ In Exercise.swift CodingKeys enum, add:
+     case goalWeight = "goal_weight"
 
-// In Exercise.swift CodingKeys enum, add:
-case goalWeight = "goal_weight"
-
-/*
  Example complete struct (adjust based on your actual Exercise struct):
  
  struct Exercise: Codable, Identifiable {
@@ -54,34 +55,34 @@ case goalWeight = "goal_weight"
  ============================================
  
  Add these to your ExerciseDetailViewModel:
+
+ 1. Make sure exercise is published (so UI updates when goal changes)
+     @Published var exercise: Exercise
+
+ 2. Add computed property for current max weight
+     var currentMaxWeight: Double? {
+         // Get the maximum weight from sets that meet the default PR rep requirement
+         let filtered = sets.filter { ($0.reps ?? 0) >= exercise.defaultPRReps }
+         return filtered.compactMap { $0.weight }.max()
+     }
+
+ 3. Add method to update goal weight
+     func updateGoalWeight(_ goalWeight: Double?) async {
+         do {
+             try await SupabaseManager.shared.updateGoalWeight(
+                 exerciseId: exercise.id,
+                 goalWeight: goalWeight
+             )
+             
+             // Refresh the exercise data by reloading
+             await loadSets()
+             
+         } catch {
+             print("Error updating goal weight: \(error.localizedDescription)")
+             // TODO: Show error alert to user
+         }
+     }
  */
-
-// 1. Make sure exercise is published (so UI updates when goal changes)
-@Published var exercise: Exercise
-
-// 2. Add computed property for current max weight
-var currentMaxWeight: Double? {
-    // Get the maximum weight from sets that meet the default PR rep requirement
-    let filtered = sets.filter { ($0.reps ?? 0) >= exercise.defaultPRReps }
-    return filtered.compactMap { $0.weight }.max()
-}
-
-// 3. Add method to update goal weight
-func updateGoalWeight(_ goalWeight: Double?) async {
-    do {
-        try await SupabaseManager.shared.updateGoalWeight(
-            exerciseId: exercise.id,
-            goalWeight: goalWeight
-        )
-        
-        // Refresh the exercise data by reloading
-        await loadSets()
-        
-    } catch {
-        print("Error updating goal weight: \(error.localizedDescription)")
-        // TODO: Show error alert to user
-    }
-}
 
 /*
  ============================================
@@ -130,9 +131,7 @@ func updateGoalWeight(_ goalWeight: Double?) async {
  ============================================
  
  Run this SQL in your Supabase SQL Editor:
- */
 
-/*
 -- Add goal_weight column to exercises table
 ALTER TABLE exercises 
 ADD COLUMN IF NOT EXISTS goal_weight DECIMAL(10, 2) NULL;

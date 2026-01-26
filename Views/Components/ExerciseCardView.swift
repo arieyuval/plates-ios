@@ -61,10 +61,24 @@ struct ExerciseCardView: View {
                 // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(exercise.name)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white.opacity(0.95))
+                        HStack(spacing: 6) {
+                            Text(exercise.name)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white.opacity(0.95))
+                            
+                            // Goal weight badge
+                            if let goalWeight = exercise.goalWeight {
+                                Text("Goal: \(exercise.formatWeight(goalWeight))")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Color.blue.opacity(0.3))
+                                    .cornerRadius(4)
+                            }
+                        }
                         
                         // Muscle group badge and note
                         HStack(spacing: 8) {

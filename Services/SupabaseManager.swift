@@ -125,11 +125,11 @@ class SupabaseManager: ObservableObject {
         return response
     }
     
-    func updateGoalWeight(_ goalWeight: Double) async throws {
+    func updateGoalWeight(_ goalWeight: Double?) async throws {
         guard let userId = currentUser?.id else { return }
         
         struct GoalWeightUpdate: Encodable {
-            let goal_weight: Double
+            let goal_weight: Double?
         }
         
         try await client.from("user_profiles")
@@ -318,6 +318,28 @@ class SupabaseManager: ObservableObject {
         
         try await client.from("exercises")
             .update(PinnedNoteUpdate(pinned_note: note))
+            .eq("id", value: exerciseId.uuidString)
+            .execute()
+    }
+    
+    func updateGoalWeight(exerciseId: UUID, goalWeight: Double?) async throws {
+        struct GoalWeightUpdate: Encodable {
+            let goal_weight: Double?
+        }
+        
+        try await client.from("exercises")
+            .update(GoalWeightUpdate(goal_weight: goalWeight))
+            .eq("id", value: exerciseId.uuidString)
+            .execute()
+    }
+    
+    func updateGoalReps(exerciseId: UUID, goalReps: Int?) async throws {
+        struct GoalRepsUpdate: Encodable {
+            let goal_reps: Int?
+        }
+        
+        try await client.from("exercises")
+            .update(GoalRepsUpdate(goal_reps: goalReps))
             .eq("id", value: exerciseId.uuidString)
             .execute()
     }

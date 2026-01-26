@@ -69,19 +69,48 @@ struct ExerciseDetailView: View {
                     currentPR: viewModel.currentPR
                 )
                 
+                // Goal Weight/Reps Card (only for strength exercises)
+                if viewModel.exercise.exerciseType == .strength {
+                    if viewModel.exercise.usesBodyWeight {
+                        // Goal Reps Card for body weight exercises
+                        GoalRepsCardView(
+                            exercise: viewModel.exercise,
+                            currentMax: viewModel.currentMaxReps,
+                            onSave: { goalReps in
+                                Task {
+                                    await viewModel.updateGoalReps(goalReps)
+                                }
+                            }
+                        )
+                    } else {
+                        // Goal Weight Card for regular strength exercises
+                        GoalWeightCardView(
+                            exercise: viewModel.exercise,
+                            currentMax: viewModel.currentMaxWeight,
+                            onSave: { goalWeight in
+                                Task {
+                                    await viewModel.updateGoalWeight(goalWeight)
+                                }
+                            }
+                        )
+                    }
+                }
+                
                 // Progress Chart
                 if !viewModel.sets.isEmpty {
                     if viewModel.exercise.exerciseType == .strength {
                         if viewModel.exercise.usesBodyWeight {
                             // Body weight exercises show reps progression
                             BodyWeightExerciseChartView(
-                                chartData: viewModel.bodyWeightChartData()
+                                chartData: viewModel.bodyWeightChartData(),
+                                goalReps: viewModel.exercise.goalReps
                             )
                         } else {
                             // Regular strength exercises show weight progression
                             ProgressChartView(
                                 chartData: viewModel.chartData(repFilter: viewModel.selectedRepTarget),
-                                repFilter: viewModel.selectedRepTarget
+                                repFilter: viewModel.selectedRepTarget,
+                                goalWeight: viewModel.exercise.goalWeight
                             )
                         }
                     } else if viewModel.exercise.exerciseType == .cardio {

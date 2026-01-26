@@ -73,7 +73,7 @@ class BodyWeightViewModel: ObservableObject {
         }
     }
     
-    func updateGoalWeight(_ goalWeight: Double) async {
+    func updateGoalWeight(_ goalWeight: Double?) async {
         do {
             try await supabase.updateGoalWeight(goalWeight)
             await loadData()

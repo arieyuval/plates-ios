@@ -16,6 +16,8 @@ struct Exercise: Identifiable, Codable, Hashable {
     var isBase: Bool
     var usesBodyWeight: Bool
     var pinnedNote: String?
+    var goalWeight: Double?
+    var goalReps: Int?
     var createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -26,6 +28,8 @@ struct Exercise: Identifiable, Codable, Hashable {
         case isBase = "is_base"
         case usesBodyWeight = "uses_body_weight"
         case pinnedNote = "pinned_note"
+        case goalWeight = "goal_weight"
+        case goalReps = "goal_reps"
         case createdAt = "created_at"
     }
     
@@ -40,6 +44,8 @@ struct Exercise: Identifiable, Codable, Hashable {
         isBase: Bool = false,
         usesBodyWeight: Bool = false,
         pinnedNote: String? = nil,
+        goalWeight: Double? = nil,
+        goalReps: Int? = nil,
         createdAt: Date? = nil
     ) {
         self.id = id
@@ -50,6 +56,8 @@ struct Exercise: Identifiable, Codable, Hashable {
         self.isBase = isBase
         self.usesBodyWeight = usesBodyWeight
         self.pinnedNote = pinnedNote
+        self.goalWeight = goalWeight
+        self.goalReps = goalReps
         self.createdAt = createdAt
     }
     

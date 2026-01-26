@@ -99,7 +99,54 @@ class ExerciseDetailViewModel: ObservableObject {
         }
     }
     
+    func updateGoalWeight(_ goalWeight: Double?) async {
+        do {
+            try await SupabaseManager.shared.updateGoalWeight(
+                exerciseId: exercise.id,
+                goalWeight: goalWeight
+            )
+            
+            // Update local exercise object
+            exercise.goalWeight = goalWeight
+            
+            // Refresh data to ensure consistency
+            await loadSets()
+            
+        } catch {
+            errorMessage = "Failed to update goal weight: \(error.localizedDescription)"
+        }
+    }
+    
+    func updateGoalReps(_ goalReps: Int?) async {
+        do {
+            try await SupabaseManager.shared.updateGoalReps(
+                exerciseId: exercise.id,
+                goalReps: goalReps
+            )
+            
+            // Update local exercise object
+            exercise.goalReps = goalReps
+            
+            // Refresh data to ensure consistency
+            await loadSets()
+            
+        } catch {
+            errorMessage = "Failed to update goal reps: \(error.localizedDescription)"
+        }
+    }
+    
     // MARK: - Computed Properties
+    
+    var currentMaxWeight: Double? {
+        // Get the maximum weight from sets that meet or exceed the default PR reps
+        let filtered = sets.filter { ($0.reps ?? 0) >= exercise.defaultPRReps }
+        return filtered.compactMap { $0.weight }.max()
+    }
+    
+    var currentMaxReps: Int? {
+        // Get the maximum reps from all sets (for body weight exercises)
+        return sets.compactMap { $0.reps }.max()
+    }
     
     var lastSet: WorkoutSet? {
         WorkoutCalculations.getLastSet(sets: sets)

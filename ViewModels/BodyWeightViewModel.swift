@@ -73,6 +73,15 @@ class BodyWeightViewModel: ObservableObject {
         }
     }
     
+    func updateLog(_ logId: UUID, weight: Double, date: Date, notes: String?) async {
+        do {
+            try await supabase.updateBodyWeightLog(logId, weight: weight, date: date, notes: notes)
+            await loadData()
+        } catch {
+            errorMessage = "Failed to update log: \(error.localizedDescription)"
+        }
+    }
+    
     func updateGoalWeight(_ goalWeight: Double?) async {
         do {
             try await supabase.updateGoalWeight(goalWeight)

@@ -10,6 +10,7 @@ import Charts
 
 struct BodyWeightView: View {
     @StateObject private var viewModel = BodyWeightViewModel()
+    @State private var editingLog: BodyWeightLog?
     
     var body: some View {
         NavigationStack {
@@ -23,18 +24,6 @@ struct BodyWeightView: View {
                         goalWeight: viewModel.goalWeight,
                         onEditGoal: {
                             viewModel.showingEditGoal = true
-                        }
-                    )
-                    
-                    // Goal Weight Card
-                    BodyWeightGoalCardView(
-                        currentWeight: viewModel.currentWeight,
-                        goalWeight: viewModel.goalWeight,
-                        startingWeight: viewModel.startingWeight,
-                        onSave: { goalWeight in
-                            Task {
-                                await viewModel.updateGoalWeight(goalWeight)
-                            }
                         }
                     )
                     
@@ -68,6 +57,9 @@ struct BodyWeightView: View {
                             Task {
                                 await viewModel.deleteLog(logId)
                             }
+                        },
+                        onEdit: { log in
+                            editingLog = log
                         }
                     )
                 }
@@ -76,13 +68,20 @@ struct BodyWeightView: View {
             .background(Color.backgroundNavy)
             .navigationTitle("Body Weight")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $viewModel.showingAddLog) {
                 AddBodyWeightLogView { weight, date, notes in
                     Task {
                         await viewModel.logWeight(weight: weight, date: date, notes: notes)
+                    }
+                }
+            }
+            .sheet(item: $editingLog) { log in
+                EditBodyWeightLogView(log: log) { logId, weight, date, notes in
+                    Task {
+                        await viewModel.updateLog(logId, weight: weight, date: date, notes: notes)
                     }
                 }
             }
@@ -110,6 +109,25 @@ struct StatsCardsView: View {
     let goalWeight: Double?
     let onEditGoal: () -> Void
     
+    private var goalReached: Bool {
+        guard let goal = goalWeight,
+              let current = currentWeight,
+              let starting = startingWeight else {
+            return false
+        }
+        
+        // Determine if user is trying to lose or gain weight
+        let isLosingWeight = goal < starting
+        
+        if isLosingWeight {
+            // Goal reached if current weight is at or below goal
+            return current <= goal
+        } else {
+            // Goal reached if current weight is at or above goal
+            return current >= goal
+        }
+    }
+    
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
@@ -118,14 +136,14 @@ struct StatsCardsView: View {
                 }
                 
                 if let current = currentWeight {
-                    StatCard(title: "Current", value: "\(Int(current)) lbs", color: .blue)
+                    StatCard(title: "Current", value: "\(Int(current)) lbs", color: goalReached ? .green : .white)
                 }
                 
                 if let goal = goalWeight {
                     Button {
                         onEditGoal()
                     } label: {
-                        StatCard(title: "Goal", value: "\(Int(goal)) lbs", color: .purple)
+                        StatCard(title: "Goal", value: "\(Int(goal)) lbs", color: goalReached ? .green : .blue)
                     }
                     .buttonStyle(.plain)
                 }
@@ -291,6 +309,7 @@ struct BodyWeightChartView: View {
 struct WeightHistoryView: View {
     let logs: [BodyWeightLog]
     let onDelete: (UUID) -> Void
+    let onEdit: (BodyWeightLog) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -329,18 +348,35 @@ struct WeightHistoryView: View {
                         }
                         
                         Spacer()
+                        
+                        HStack(spacing: 16) {
+                            Button {
+                                onEdit(log)
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.white.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                            
+                            Button {
+                                onDelete(log.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.red.opacity(0.8))
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                        }
                     }
                     .padding()
                     .background(Color.cardDark)
                     .cornerRadius(8)
                     .padding(.horizontal)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            onDelete(log.id)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
                 }
             }
         }

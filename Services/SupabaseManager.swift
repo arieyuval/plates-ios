@@ -495,4 +495,25 @@ class SupabaseManager: ObservableObject {
             .eq("id", value: logId.uuidString)
             .execute()
     }
+    
+    func updateBodyWeightLog(_ logId: UUID, weight: Double, date: Date, notes: String?) async throws {
+        let iso8601Date = ISO8601DateFormatter().string(from: date)
+        
+        struct BodyWeightLogUpdate: Encodable {
+            let weight: Double
+            let date: String
+            let notes: String?
+        }
+        
+        let updateData = BodyWeightLogUpdate(
+            weight: weight,
+            date: iso8601Date,
+            notes: notes?.isEmpty == false ? notes : nil
+        )
+        
+        try await client.from("body_weight_logs")
+            .update(updateData)
+            .eq("id", value: logId.uuidString)
+            .execute()
+    }
 }

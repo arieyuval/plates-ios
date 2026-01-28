@@ -19,6 +19,7 @@ struct Exercise: Identifiable, Codable, Hashable {
     var goalWeight: Double?
     var goalReps: Int?
     var createdAt: Date?
+    var userPRReps: Int? // User's custom PR reps override
 
     enum CodingKeys: String, CodingKey {
         case id, name
@@ -31,6 +32,7 @@ struct Exercise: Identifiable, Codable, Hashable {
         case goalWeight = "goal_weight"
         case goalReps = "goal_reps"
         case createdAt = "created_at"
+        case userPRReps = "user_pr_reps"
     }
     
     // MARK: - Initialization
@@ -46,7 +48,8 @@ struct Exercise: Identifiable, Codable, Hashable {
         pinnedNote: String? = nil,
         goalWeight: Double? = nil,
         goalReps: Int? = nil,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        userPRReps: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -59,6 +62,12 @@ struct Exercise: Identifiable, Codable, Hashable {
         self.goalWeight = goalWeight
         self.goalReps = goalReps
         self.createdAt = createdAt
+        self.userPRReps = userPRReps
+    }
+    
+    /// Get the effective PR reps to use (user's custom value or default)
+    var effectivePRReps: Int {
+        userPRReps ?? defaultPRReps
     }
     
     // MARK: - Helper Methods
@@ -69,5 +78,29 @@ struct Exercise: Identifiable, Codable, Hashable {
             return "\(Int(weight)) lbs"
         }
         return weight > 0 ? "BW + \(Int(weight)) lbs" : "BW"
+    }
+    
+    /// Check if exercise matches search text (searches name and muscle group)
+    func matches(searchText: String) -> Bool {
+        if searchText.isEmpty { return true }
+        
+        let lowercasedSearch = searchText.lowercased()
+        
+        // Search in exercise name
+        if name.lowercased().contains(lowercasedSearch) {
+            return true
+        }
+        
+        // Search in muscle group
+        if muscleGroup.displayName.lowercased().contains(lowercasedSearch) {
+            return true
+        }
+        
+        // Also check raw value in case it differs
+        if muscleGroup.rawValue.lowercased().contains(lowercasedSearch) {
+            return true
+        }
+        
+        return false
     }
 }

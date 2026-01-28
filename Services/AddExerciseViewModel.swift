@@ -92,7 +92,8 @@ class AddExerciseViewModel: ObservableObject {
     }
     
     var strengthMuscleGroups: [MuscleGroup] {
-        [.chest, .back, .legs, .shoulders, .arms, .biceps, .triceps, .core]
+        // Don't include .arms - users must choose biceps or triceps
+        [.chest, .back, .legs, .shoulders, .biceps, .triceps, .core]
     }
     
     // MARK: - Methods
@@ -106,7 +107,7 @@ class AddExerciseViewModel: ObservableObject {
     }
     
     func updateSuggestions() {
-        guard exerciseName.count >= 1 else {
+        guard exerciseName.count >= 2 else {
             suggestions = []
             showSuggestions = false
             return
@@ -114,12 +115,27 @@ class AddExerciseViewModel: ObservableObject {
         
         let searchTerm = exerciseName.lowercased().trimmingCharacters(in: .whitespaces)
         
+        // Filter and sort suggestions
         suggestions = allExercises
             .filter { exercise in
-                exercise.name.lowercased().contains(searchTerm) ||
-                exercise.muscleGroup.rawValue.lowercased().contains(searchTerm)
+                let nameMatch = exercise.name.lowercased().contains(searchTerm)
+                let muscleMatch = exercise.muscleGroup.rawValue.lowercased().contains(searchTerm)
+                return nameMatch || muscleMatch
             }
-            .prefix(6)
+            .sorted { exercise1, exercise2 in
+                // Prioritize exact prefix matches
+                let name1Lower = exercise1.name.lowercased()
+                let name2Lower = exercise2.name.lowercased()
+                let starts1 = name1Lower.hasPrefix(searchTerm)
+                let starts2 = name2Lower.hasPrefix(searchTerm)
+                
+                if starts1 && !starts2 { return true }
+                if !starts1 && starts2 { return false }
+                
+                // Then alphabetically
+                return name1Lower < name2Lower
+            }
+            .prefix(8)
             .map { $0 }
         
         showSuggestions = !suggestions.isEmpty
@@ -138,8 +154,8 @@ class AddExerciseViewModel: ObservableObject {
         showSuggestions = false
     }
     
-    func submit() async {
-        guard isValid else { return }
+    func submit() async -> Bool {
+        guard isValid else { return false }
         
         isSubmitting = true
         error = nil
@@ -154,6 +170,8 @@ class AddExerciseViewModel: ObservableObject {
                 usesBodyWeight: exerciseType == .strength ? usesBodyWeight : false
             )
             
+            print("✅ Exercise added/linked successfully: \(exercise.name)")
+            
             // Step 2: Create initial set if provided
             if exerciseType == .strength, let weight = prWeight, let reps = prReps, reps > 0 {
                 try await supabase.logSet(
@@ -164,6 +182,7 @@ class AddExerciseViewModel: ObservableObject {
                     duration: nil,
                     notes: nil
                 )
+                print("✅ Initial PR set logged")
             } else if exerciseType == .cardio, let distance = prDistance, let duration = prDuration, distance > 0, duration > 0 {
                 try await supabase.logSet(
                     exerciseId: exercise.id,
@@ -173,14 +192,17 @@ class AddExerciseViewModel: ObservableObject {
                     duration: duration,
                     notes: nil
                 )
+                print("✅ Initial cardio session logged")
             }
             
-            // Success - view will be dismissed by caller
+            isSubmitting = false
+            return true
             
         } catch {
             self.error = "Failed to add exercise: \(error.localizedDescription)"
+            print("❌ Failed to add exercise: \(error)")
+            isSubmitting = false
+            return false
         }
-        
-        isSubmitting = false
     }
 }

@@ -160,6 +160,30 @@ class ExerciseDetailViewModel: ObservableObject {
         WorkoutCalculations.getPR(for: sets, repTarget: selectedRepTarget)
     }
     
+    var bestPace: CardioBestPace? {
+        // Find the best pace (lowest minutes per mile) from all cardio sets
+        let cardioSets = sets.filter { $0.isCardio }
+        
+        guard let bestSet = cardioSets.min(by: { set1, set2 in
+            guard let distance1 = set1.distance, let duration1 = set1.duration,
+                  let distance2 = set2.distance, let duration2 = set2.duration,
+                  distance1 > 0, distance2 > 0 else {
+                return false
+            }
+            let pace1 = Double(duration1) / distance1
+            let pace2 = Double(duration2) / distance2
+            return pace1 < pace2
+        }),
+        let distance = bestSet.distance,
+        let duration = bestSet.duration,
+        distance > 0 else {
+            return nil
+        }
+        
+        let pace = Double(duration) / distance
+        return CardioBestPace(pace: pace, distance: distance, duration: duration, date: bestSet.date)
+    }
+    
     func chartData(repFilter: Int) -> [(date: Date, weight: Double)] {
         WorkoutCalculations.prepareChartData(sets: sets, repFilter: repFilter)
     }

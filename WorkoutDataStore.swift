@@ -157,6 +157,14 @@ class WorkoutDataStore: ObservableObject {
         return WorkoutCalculations.getPR(for: sets, repTarget: repTarget)
     }
     
+    /// Get best distance for a cardio exercise
+    func getBestDistance(for exerciseId: UUID) -> Double? {
+        let sets = getSets(for: exerciseId)
+        return sets
+            .compactMap { $0.distance }
+            .max()
+    }
+    
     /// Get exercise by ID
     func getExercise(_ exerciseId: UUID) -> Exercise? {
         exercises.first { $0.id == exerciseId }
@@ -247,6 +255,16 @@ class WorkoutDataStore: ObservableObject {
         // Update local cache
         if let index = exercises.firstIndex(where: { $0.id == exerciseId }) {
             exercises[index].pinnedNote = note
+        }
+    }
+    
+    /// Update user's custom PR reps for an exercise
+    func updateUserPRReps(exerciseId: UUID, userPRReps: Int?) async throws {
+        try await supabase.updateUserPRReps(exerciseId: exerciseId, userPRReps: userPRReps)
+        
+        // Update local cache
+        if let index = exercises.firstIndex(where: { $0.id == exerciseId }) {
+            exercises[index].userPRReps = userPRReps
         }
     }
     

@@ -91,6 +91,80 @@ class SupabaseManager: ObservableObject {
         self.isAuthenticated = false
     }
     
+    /// Delete all user data from the database AND delete the auth account
+    /// This will permanently delete:
+    /// - All workout sets
+    /// - All body weight logs
+    /// - User-exercise associations
+    /// - User profile
+    /// - User authentication account (email will be removed from system)
+    /// After deletion, the user will NOT be able to sign in with the same email
+    /// unless they create a completely new account.
+    func deleteAllUserData() async throws {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        // Get the current session token for authorization
+        let session: Session
+        do {
+            session = try await client.auth.session
+        } catch {
+            print("❌ Failed to get session: \(error)")
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "Session expired. Please sign out and sign back in."])
+        }
+        
+        // Call the Edge Function to delete everything including the auth account
+        let urlString = "\(Config.supabaseURL)/functions/v1/delete-account"
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+        }
+        
+        print("🗑️ Calling delete-account function...")
+        print("📍 URL: \(urlString)")
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Use a custom header to bypass Supabase's automatic JWT verification
+        request.setValue(session.accessToken, forHTTPHeaderField: "x-user-token")
+        request.setValue(Config.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Config.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "SupabaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
+        }
+        
+        print("📡 Response Status: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📡 Response Body: \(responseString)")
+        }
+        
+        if !(200...299).contains(httpResponse.statusCode) {
+            // Try to parse error message
+            if let errorDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorDict["message"] as? String ?? errorDict["error"] as? String {
+                print("❌ Delete failed: \(errorMessage)")
+                throw NSError(domain: "SupabaseManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+            }
+            
+            // If we can't parse the error, show raw response
+            if let responseString = String(data: data, encoding: .utf8) {
+                throw NSError(domain: "SupabaseManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to delete account: \(responseString)"])
+            }
+            
+            throw NSError(domain: "SupabaseManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to delete account"])
+        }
+        
+        print("✅ Account deleted successfully")
+        
+        // Clear local session
+        self.currentUser = nil
+        self.isAuthenticated = false
+    }
+    
     // MARK: - User Profile
     
     private func createUserProfile(userId: UUID, initialWeight: Double?, goalWeight: Double?) async throws {
@@ -177,7 +251,43 @@ class SupabaseManager: ObservableObject {
             }
         }
         
-        return allExercises.sorted { $0.name < $1.name }
+        // Fetch usage counts for sorting
+        struct UsageCount: Codable {
+            let exerciseId: UUID
+            let count: Int
+            
+            enum CodingKeys: String, CodingKey {
+                case exerciseId = "exercise_id"
+                case count
+            }
+        }
+        
+        // Get usage counts from sets table
+        let usageCounts: [UsageCount]
+        do {
+            usageCounts = try await client.from("sets")
+                .select("exercise_id, count:exercise_id.count()")
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+                .value
+        } catch {
+            print("⚠️ Failed to fetch usage counts: \(error)")
+            usageCounts = []
+        }
+        
+        // Create usage dictionary
+        let usageDict = Dictionary(uniqueKeysWithValues: usageCounts.map { ($0.exerciseId, $0.count) })
+        
+        // Sort by usage (most used first), then by name
+        return allExercises.sorted { exercise1, exercise2 in
+            let usage1 = usageDict[exercise1.id] ?? 0
+            let usage2 = usageDict[exercise2.id] ?? 0
+            
+            if usage1 != usage2 {
+                return usage1 > usage2
+            }
+            return exercise1.name < exercise2.name
+        }
     }
     
     func createExercise(name: String, muscleGroup: MuscleGroup, exerciseType: ExerciseType) async throws -> Exercise {
@@ -251,6 +361,8 @@ class SupabaseManager: ObservableObject {
             throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
+        print("🔍 Adding exercise for user: \(userId.uuidString)")
+        
         // Step 1: Check if exercise with same name and muscle group exists
         let existingExercises: [Exercise] = try await client.from("exercises")
             .select()
@@ -263,9 +375,11 @@ class SupabaseManager: ObservableObject {
         
         if let existing = existingExercises.first {
             // Exercise exists, use it
+            print("✓ Exercise already exists: \(existing.name) (\(existing.id))")
             exercise = existing
         } else {
             // Create new exercise
+            print("→ Creating new exercise: \(name)")
             struct ExerciseInsert: Encodable {
                 let name: String
                 let muscle_group: String
@@ -290,9 +404,15 @@ class SupabaseManager: ObservableObject {
                 .single()
                 .execute()
                 .value
+            
+            print("✓ Exercise created: \(exercise.name) (\(exercise.id))")
         }
         
         // Step 2: Link to user (upsert to avoid duplicates)
+        print("→ Linking exercise to user...")
+        print("   user_id: \(userId.uuidString)")
+        print("   exercise_id: \(exercise.id.uuidString)")
+        
         struct UserExerciseLink: Encodable {
             let user_id: String
             let exercise_id: String
@@ -303,9 +423,17 @@ class SupabaseManager: ObservableObject {
             exercise_id: exercise.id.uuidString
         )
         
-        try await client.from("user_exercises")
-            .upsert(linkData)
-            .execute()
+        do {
+            try await client.from("user_exercises")
+                .upsert(linkData)
+                .execute()
+            print("✓ Exercise linked to user successfully")
+        } catch {
+            print("❌ Failed to link exercise to user: \(error)")
+            print("   This usually means the user_id doesn't exist in auth.users table")
+            print("   Current user: \(String(describing: currentUser))")
+            throw error
+        }
         
         return exercise
     }
@@ -342,6 +470,35 @@ class SupabaseManager: ObservableObject {
             .update(GoalRepsUpdate(goal_reps: goalReps))
             .eq("id", value: exerciseId.uuidString)
             .execute()
+    }
+    
+    func updateUserPRReps(exerciseId: UUID, userPRReps: Int?) async throws {
+        guard let userId = currentUser?.id else { return }
+        
+        // Note: This function is currently disabled because user_pr_reps column
+        // doesn't exist in the user_exercises table. If you want per-user PR reps
+        // customization, you'll need to add this column to your database.
+        print("⚠️ updateUserPRReps called but user_pr_reps column doesn't exist in database")
+        
+        // TODO: When you add the user_pr_reps column to user_exercises table, uncomment this:
+        /*
+        struct UserPRRepsUpdate: Encodable {
+            let user_id: String
+            let exercise_id: String
+            let user_pr_reps: Int?
+        }
+        
+        let updateData = UserPRRepsUpdate(
+            user_id: userId.uuidString,
+            exercise_id: exerciseId.uuidString,
+            user_pr_reps: userPRReps
+        )
+        
+        // Upsert to user_exercises table
+        try await client.from("user_exercises")
+            .upsert(updateData)
+            .execute()
+        */
     }
     
     // MARK: - Sets

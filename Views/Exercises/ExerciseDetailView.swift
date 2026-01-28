@@ -19,21 +19,6 @@ struct ExerciseDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-            // Muscle group badge
-            HStack {
-                Text(viewModel.exercise.muscleGroup.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.backgroundNavy)
-                    .foregroundStyle(.white)
-                    .cornerRadius(8)
-                
-                Spacer()
-            }
-            .padding(.horizontal)
-                
                 // Pinned Note
                 PinnedNoteSection(
                     note: $viewModel.pinnedNote,
@@ -62,12 +47,19 @@ struct ExerciseDetailView: View {
                     LastSetInfoView(set: lastSet, exercise: viewModel.exercise)
                 }
                 
-                // PR Selector and Display
-                PRSelectorView(
-                    exercise: viewModel.exercise,
-                    selectedRepTarget: $viewModel.selectedRepTarget,
-                    currentPR: viewModel.currentPR
-                )
+                // PR Selector and Display (only for strength exercises)
+                if viewModel.exercise.exerciseType == .strength {
+                    PRSelectorView(
+                        exercise: viewModel.exercise,
+                        selectedRepTarget: $viewModel.selectedRepTarget,
+                        currentPR: viewModel.currentPR
+                    )
+                }
+                
+                // Best Pace (only for cardio exercises)
+                if viewModel.exercise.exerciseType == .cardio {
+                    BestPaceView(bestPace: viewModel.bestPace)
+                }
                 
                 // Goal Weight/Reps Card (only for strength exercises)
                 if viewModel.exercise.exerciseType == .strength {
@@ -137,11 +129,26 @@ struct ExerciseDetailView: View {
             .padding(.vertical)
         }
         .background(Color.backgroundNavy)
-        .navigationTitle(viewModel.exercise.name)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack {
+                    Text(viewModel.exercise.name)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    
+                    Spacer()
+                    
+                    Text(viewModel.exercise.muscleGroup.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(viewModel.exercise.muscleGroup.color(for: colorScheme))
+                }
+            }
+        }
         .task {
             await viewModel.loadSets()
         }

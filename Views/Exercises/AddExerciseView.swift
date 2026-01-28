@@ -10,7 +10,7 @@ import SwiftUI
 struct AddExerciseView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = AddExerciseViewModel()
-    let onComplete: (Exercise) -> Void
+    let onComplete: () -> Void
     
     var body: some View {
         NavigationStack {
@@ -33,6 +33,11 @@ struct AddExerciseView: View {
                 } header: {
                     Text("Exercise Name")
                         .foregroundStyle(.white.opacity(0.6))
+                } footer: {
+                    if viewModel.showSuggestions {
+                        Text("Suggestions based on existing exercises")
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
                 }
                 .listRowBackground(Color.statBoxDark)
                 
@@ -150,9 +155,10 @@ struct AddExerciseView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         Task {
-                            await viewModel.submit()
-                            if viewModel.error == nil {
-                                // Success - dismiss modal
+                            let success = await viewModel.submit()
+                            if success {
+                                // Success - call completion and dismiss
+                                onComplete()
                                 dismiss()
                             }
                         }
@@ -177,17 +183,31 @@ struct ExerciseSuggestionRow: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        HStack {
-            Text(exercise.name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
+        HStack(spacing: 12) {
+            // Icon
+            Image(systemName: exercise.exerciseType == .cardio ? "figure.run" : "dumbbell.fill")
+                .font(.callout)
+                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exercise.name)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.white)
+                
+                Text(exercise.muscleGroup.rawValue)
+                    .font(.caption)
+                    .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+            }
             
             Spacer()
             
-            Text(exercise.muscleGroup.rawValue)
+            // Indicator that this exercise already exists
+            Image(systemName: "checkmark.circle.fill")
                 .font(.caption)
-                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                .foregroundStyle(.green.opacity(0.7))
         }
+        .padding(.vertical, 4)
     }
 }

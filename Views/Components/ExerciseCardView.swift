@@ -12,6 +12,7 @@ struct ExerciseCardView: View {
     let lastSession: WorkoutSet?
     let lastSet: WorkoutSet?
     let currentPR: PersonalRecord?
+    let bestDistance: Double?
     let onQuickLogStrength: ((Double, Int) -> Void)?
     let onQuickLogCardio: ((Double, Int) -> Void)?
     
@@ -22,20 +23,29 @@ struct ExerciseCardView: View {
     @State private var showSuccess = false
     @Environment(\.colorScheme) var colorScheme
     
-    // Convenience initializer for strength exercises
+    // Convenience initializer
     init(
         exercise: Exercise,
         lastSession: WorkoutSet?,
         lastSet: WorkoutSet?,
         currentPR: PersonalRecord?,
+        bestDistance: Double? = nil,
         onQuickLog: @escaping (Double, Int) -> Void
     ) {
         self.exercise = exercise
         self.lastSession = lastSession
         self.lastSet = lastSet
         self.currentPR = currentPR
-        self.onQuickLogStrength = exercise.exerciseType == .strength ? onQuickLog : nil
-        self.onQuickLogCardio = exercise.exerciseType == .cardio ? onQuickLog : nil
+        self.bestDistance = bestDistance
+        
+        // Route to correct handler based on exercise type
+        if exercise.exerciseType == .strength {
+            self.onQuickLogStrength = onQuickLog
+            self.onQuickLogCardio = nil
+        } else {
+            self.onQuickLogStrength = nil
+            self.onQuickLogCardio = onQuickLog
+        }
     }
     
     // Compute which note to display based on priority
@@ -143,21 +153,49 @@ struct ExerciseCardView: View {
                         .cornerRadius(10)
                     }
                     
-                    // PR Box with accent color
-                    if let currentPR = currentPR {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(exercise.defaultPRReps)RM PR")
-                                .font(.caption2)
-                                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
-                            Text(exercise.formatWeight(currentPR.weight))
-                                .font(.callout)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                    // PR/Best Box with accent color
+                    if exercise.exerciseType == .strength {
+                        // Show PR for strength exercises
+                        if let currentPR = currentPR {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(exercise.effectivePRReps)RM PR")
+                                    .font(.caption2)
+                                    .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
+                                Text(exercise.formatWeight(currentPR.weight))
+                                    .font(.callout)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.15))
+                            .cornerRadius(10)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(10)
-                        .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.15))
-                        .cornerRadius(10)
+                    } else if exercise.exerciseType == .cardio {
+                        // Show best distance for cardio exercises
+                        if let distance = bestDistance {
+                            let distanceText: String = {
+                                if distance.truncatingRemainder(dividingBy: 1) == 0 {
+                                    return "\(Int(distance))"
+                                } else {
+                                    return String(format: "%.1f", distance)
+                                }
+                            }()
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Best Distance")
+                                    .font(.caption2)
+                                    .foregroundStyle(exercise.muscleGroup.color(for: colorScheme).opacity(0.8))
+                                Text(distanceText)
+                                    .font(.callout)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(exercise.muscleGroup.color(for: colorScheme).opacity(0.15))
+                            .cornerRadius(10)
+                        }
                     }
                 }
                 

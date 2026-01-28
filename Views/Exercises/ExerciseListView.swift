@@ -42,10 +42,29 @@ struct ExerciseListView: View {
                                     exercise: exercise,
                                     lastSession: viewModel.getLastSession(for: exercise.id),
                                     lastSet: viewModel.getLastSet(for: exercise.id),
-                                    currentPR: viewModel.getCurrentPR(for: exercise.id, exercise: exercise)
-                                ) { weight, reps in
+                                    currentPR: viewModel.getCurrentPR(for: exercise.id, exercise: exercise),
+                                    bestDistance: viewModel.getBestDistance(for: exercise.id)
+                                ) { value1, value2 in
                                     Task {
-                                        await viewModel.quickLogSet(exerciseId: exercise.id, weight: weight, reps: reps)
+                                        if exercise.exerciseType == .strength {
+                                            // value1 = weight, value2 = reps
+                                            await viewModel.quickLogSet(
+                                                exerciseId: exercise.id,
+                                                weight: value1,
+                                                reps: value2,
+                                                distance: nil,
+                                                duration: nil
+                                            )
+                                        } else {
+                                            // value1 = distance, value2 = duration
+                                            await viewModel.quickLogSet(
+                                                exerciseId: exercise.id,
+                                                weight: nil,
+                                                reps: nil,
+                                                distance: value1,
+                                                duration: value2
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -71,9 +90,9 @@ struct ExerciseListView: View {
                 }
             }
             .sheet(isPresented: $viewModel.showingAddExercise) {
-                AddExerciseView { exercise in
+                AddExerciseView {
                     Task {
-                        await viewModel.loadData()
+                        await viewModel.forceRefresh()
                     }
                 }
             }

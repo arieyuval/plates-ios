@@ -38,7 +38,14 @@ struct WorkoutSet: Identifiable, Codable, Hashable {
         if isStrength, let weight = weight, let reps = reps {
             return "\(Int(weight)) lbs × \(reps)"
         } else if isCardio, let distance = distance, let duration = duration {
-            return "\(String(format: "%.2f", distance)) mi • \(duration) min"
+            // Format distance without decimal places if it's a whole number
+            let distanceText: String
+            if distance.truncatingRemainder(dividingBy: 1) == 0 {
+                distanceText = "\(Int(distance))"
+            } else {
+                distanceText = String(format: "%.1f", distance)
+            }
+            return "\(distanceText) × \(duration) min"
         }
         return "Invalid set"
     }
@@ -49,7 +56,14 @@ struct WorkoutSet: Identifiable, Codable, Hashable {
             let weightText = formatWeight(weight, usesBodyWeight: usesBodyWeight)
             return "\(weightText) × \(reps)"
         } else if isCardio, let distance = distance, let duration = duration {
-            return "\(String(format: "%.2f", distance)) mi • \(duration) min"
+            // Format distance without decimal places if it's a whole number
+            let distanceText: String
+            if distance.truncatingRemainder(dividingBy: 1) == 0 {
+                distanceText = "\(Int(distance))"
+            } else {
+                distanceText = String(format: "%.1f", distance)
+            }
+            return "\(distanceText) × \(duration) min"
         }
         return "Invalid set"
     }

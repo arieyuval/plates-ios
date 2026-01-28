@@ -67,7 +67,7 @@ struct BodyWeightView: View {
             }
             .background(Color.backgroundNavy)
             .navigationTitle("Body Weight")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.backgroundNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)

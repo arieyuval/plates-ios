@@ -100,19 +100,39 @@ class ExerciseDetailViewModel: ObservableObject {
     }
     
     func updateGoalWeight(_ goalWeight: Double?) async {
+        print("🟦 ExerciseDetailViewModel.updateGoalWeight called")
+        print("   Goal Weight: \(goalWeight?.description ?? "nil")")
+        print("   Exercise: \(exercise.name) (\(exercise.id))")
+        
         do {
             try await SupabaseManager.shared.updateGoalWeight(
                 exerciseId: exercise.id,
                 goalWeight: goalWeight
             )
             
-            // Update local exercise object
-            exercise.goalWeight = goalWeight
+            print("🟢 SupabaseManager.updateGoalWeight succeeded")
             
-            // Refresh data to ensure consistency
-            await loadSets()
+            // Update local exercise object immediately
+            exercise.goalWeight = goalWeight
+            print("🟢 Local exercise.goalWeight updated to: \(goalWeight?.description ?? "nil")")
+            
+            // Force refresh exercises to get updated data from database
+            print("🔄 Forcing data refresh...")
+            await dataStore.fetchAllData(force: true)
+            
+            // Update our local exercise reference with the fresh data
+            if let updatedExercise = dataStore.getExercise(exercise.id) {
+                exercise = updatedExercise
+                print("🟢 Local exercise updated from dataStore")
+                print("   Fresh goalWeight from DB: \(updatedExercise.goalWeight?.description ?? "nil")")
+            } else {
+                print("⚠️ Could not find exercise in dataStore after refresh")
+            }
             
         } catch {
+            print("🔴 Error in updateGoalWeight: \(error)")
+            print("🔴 Error type: \(type(of: error))")
+            print("🔴 Error localized: \(error.localizedDescription)")
             errorMessage = "Failed to update goal weight: \(error.localizedDescription)"
         }
     }
@@ -124,11 +144,16 @@ class ExerciseDetailViewModel: ObservableObject {
                 goalReps: goalReps
             )
             
-            // Update local exercise object
+            // Update local exercise object immediately
             exercise.goalReps = goalReps
             
-            // Refresh data to ensure consistency
-            await loadSets()
+            // Force refresh exercises to get updated data from database
+            await dataStore.fetchAllData(force: true)
+            
+            // Update our local exercise reference with the fresh data
+            if let updatedExercise = dataStore.getExercise(exercise.id) {
+                exercise = updatedExercise
+            }
             
         } catch {
             errorMessage = "Failed to update goal reps: \(error.localizedDescription)"

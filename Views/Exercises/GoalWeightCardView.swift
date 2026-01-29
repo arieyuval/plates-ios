@@ -47,22 +47,40 @@ struct GoalWeightCardView: View {
             }
             
             if isEditing {
-                HStack(spacing: 12) {
-                    TextField("Goal Weight", text: $goalText)
-                        .keyboardType(.decimalPad)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("Save") {
-                        saveGoal()
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        TextField("Goal Weight", text: $goalText)
+                            .keyboardType(.decimalPad)
+                            .padding(10)
+                            .background(Color.white.opacity(0.1))
+                            .foregroundStyle(.white)
+                            .cornerRadius(8)
+                        
+                        Text("lbs")
+                            .foregroundStyle(.white.opacity(0.7))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(goalText.isEmpty && exercise.goalWeight == nil)
                     
-                    Button("Cancel") {
-                        isEditing = false
-                        goalText = ""
+                    HStack(spacing: 12) {
+                        Button("Save") {
+                            saveGoal()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(goalText.isEmpty && exercise.goalWeight == nil ? Color.blue.opacity(0.3) : Color.blue)
+                        .foregroundStyle(.white)
+                        .cornerRadius(8)
+                        .disabled(goalText.isEmpty && exercise.goalWeight == nil)
+                        
+                        Button("Cancel") {
+                            isEditing = false
+                            goalText = ""
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.1))
+                        .foregroundStyle(.white)
+                        .cornerRadius(8)
                     }
-                    .buttonStyle(.bordered)
                 }
             } else {
                 if let goal = exercise.goalWeight {

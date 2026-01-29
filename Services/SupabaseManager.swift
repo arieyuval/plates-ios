@@ -247,30 +247,52 @@ class SupabaseManager: ObservableObject {
             .execute()
             .value
         
-        // Fetch user's custom exercises via junction table
-        struct UserExerciseResponse: Codable {
+        // Fetch user's linked exercises with user-specific preferences from junction table
+        struct UserExerciseWithPreferences: Codable {
             let exerciseId: UUID
             let exercise: Exercise
+            let pinnedNote: String?
+            let goalWeight: Double?
+            let goalReps: Int?
+            let userPRReps: Int?
             
             enum CodingKeys: String, CodingKey {
                 case exerciseId = "exercise_id"
                 case exercise = "exercises"
+                case pinnedNote = "pinned_note"
+                case goalWeight = "goal_weight"
+                case goalReps = "goal_reps"
+                case userPRReps = "user_pr_reps"
             }
         }
         
-        let userExercisesResponse: [UserExerciseResponse] = try await client.from("user_exercises")
-            .select("exercise_id, exercises(*)")
+        let userExercisesResponse: [UserExerciseWithPreferences] = try await client.from("user_exercises")
+            .select("exercise_id, exercises(*), pinned_note, goal_weight, goal_reps, user_pr_reps")
             .eq("user_id", value: userId.uuidString)
             .execute()
             .value
         
-        let userExercises = userExercisesResponse.map { $0.exercise }
+        // Merge user preferences into exercise objects
+        var exercisesWithPreferences: [Exercise] = []
+        for response in userExercisesResponse {
+            var exercise = response.exercise
+            exercise.pinnedNote = response.pinnedNote
+            exercise.goalWeight = response.goalWeight
+            exercise.goalReps = response.goalReps
+            exercise.userPRReps = response.userPRReps
+            exercisesWithPreferences.append(exercise)
+        }
         
-        // Combine and remove duplicates
-        var allExercises = baseExercises
-        for exercise in userExercises {
-            if !allExercises.contains(where: { $0.id == exercise.id }) {
-                allExercises.append(exercise)
+        // Merge base and user exercises, applying user preferences to base exercises
+        var allExercises: [Exercise] = []
+        
+        // Add user exercises (already have preferences)
+        allExercises.append(contentsOf: exercisesWithPreferences)
+        
+        // Add base exercises that aren't already in the user's list
+        for baseExercise in baseExercises {
+            if !allExercises.contains(where: { $0.id == baseExercise.id }) {
+                allExercises.append(baseExercise)
             }
         }
         
@@ -545,67 +567,123 @@ struct AnyCodable: Codable {
     }
 }
 
+    /// Ensure a user_exercises link exists (for setting preferences on base exercises)
+    private func ensureUserExerciseLink(exerciseId: UUID) async throws {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        struct UserExerciseLink: Encodable {
+            let user_id: String
+            let exercise_id: String
+        }
+        
+        let linkData = UserExerciseLink(
+            user_id: userId.uuidString,
+            exercise_id: exerciseId.uuidString
+        )
+        
+        // Upsert - inserts if not exists, does nothing if exists
+        try await client.from("user_exercises")
+            .upsert(linkData)
+            .execute()
+    }
+
     
     func updatePinnedNote(exerciseId: UUID, note: String?) async throws {
-        struct PinnedNoteUpdate: Encodable {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        struct UserExerciseUpsert: Encodable {
+            let user_id: String
+            let exercise_id: String
             let pinned_note: String?
         }
         
-        try await client.from("exercises")
-            .update(PinnedNoteUpdate(pinned_note: note))
-            .eq("id", value: exerciseId.uuidString)
+        let upsertData = UserExerciseUpsert(
+            user_id: userId.uuidString,
+            exercise_id: exerciseId.uuidString,
+            pinned_note: note
+        )
+        
+        try await client.from("user_exercises")
+            .upsert(upsertData, onConflict: "user_id,exercise_id")
             .execute()
+        
+        print("✅ Updated pinned note for exercise \(exerciseId)")
     }
     
     func updateGoalWeight(exerciseId: UUID, goalWeight: Double?) async throws {
-        struct GoalWeightUpdate: Encodable {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        struct UserExerciseUpsert: Encodable {
+            let user_id: String
+            let exercise_id: String
             let goal_weight: Double?
         }
         
-        try await client.from("exercises")
-            .update(GoalWeightUpdate(goal_weight: goalWeight))
-            .eq("id", value: exerciseId.uuidString)
+        let upsertData = UserExerciseUpsert(
+            user_id: userId.uuidString,
+            exercise_id: exerciseId.uuidString,
+            goal_weight: goalWeight
+        )
+        
+        try await client.from("user_exercises")
+            .upsert(upsertData, onConflict: "user_id,exercise_id")
             .execute()
+        
+        print("✅ Updated goal weight for exercise \(exerciseId): \(goalWeight?.description ?? "nil")")
     }
     
     func updateGoalReps(exerciseId: UUID, goalReps: Int?) async throws {
-        struct GoalRepsUpdate: Encodable {
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        struct UserExerciseUpsert: Encodable {
+            let user_id: String
+            let exercise_id: String
             let goal_reps: Int?
         }
         
-        try await client.from("exercises")
-            .update(GoalRepsUpdate(goal_reps: goalReps))
-            .eq("id", value: exerciseId.uuidString)
+        let upsertData = UserExerciseUpsert(
+            user_id: userId.uuidString,
+            exercise_id: exerciseId.uuidString,
+            goal_reps: goalReps
+        )
+        
+        try await client.from("user_exercises")
+            .upsert(upsertData, onConflict: "user_id,exercise_id")
             .execute()
+        
+        print("✅ Updated goal reps for exercise \(exerciseId): \(goalReps?.description ?? "nil")")
     }
     
     func updateUserPRReps(exerciseId: UUID, userPRReps: Int?) async throws {
-        guard let userId = currentUser?.id else { return }
+        guard let userId = currentUser?.id else {
+            throw NSError(domain: "SupabaseManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
         
-        // Note: This function is currently disabled because user_pr_reps column
-        // doesn't exist in the user_exercises table. If you want per-user PR reps
-        // customization, you'll need to add this column to your database.
-        print("⚠️ updateUserPRReps called but user_pr_reps column doesn't exist in database")
-        
-        // TODO: When you add the user_pr_reps column to user_exercises table, uncomment this:
-        /*
-        struct UserPRRepsUpdate: Encodable {
+        struct UserExerciseUpsert: Encodable {
             let user_id: String
             let exercise_id: String
             let user_pr_reps: Int?
         }
         
-        let updateData = UserPRRepsUpdate(
+        let upsertData = UserExerciseUpsert(
             user_id: userId.uuidString,
             exercise_id: exerciseId.uuidString,
             user_pr_reps: userPRReps
         )
         
-        // Upsert to user_exercises table
         try await client.from("user_exercises")
-            .upsert(updateData)
+            .upsert(upsertData, onConflict: "user_id,exercise_id")
             .execute()
-        */
+        
+        print("✅ Updated user PR reps for exercise \(exerciseId): \(userPRReps?.description ?? "nil")")
     }
     
     // MARK: - Sets

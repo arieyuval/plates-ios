@@ -50,8 +50,8 @@ struct ProgressChartView: View {
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.95))
             
-            if chartData.isEmpty {
-                Text("No data for \(repFilter)+ reps")
+            if chartData.count < 2 {
+                Text(chartData.isEmpty ? "No data for \(repFilter)+ reps" : "Not enough data to graph (need 2+ data points)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .padding()
@@ -136,8 +136,8 @@ struct CardioProgressChartView: View {
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.95))
             
-            if chartData.isEmpty {
-                Text("No cardio data yet")
+            if chartData.count < 2 {
+                Text(chartData.isEmpty ? "No cardio data yet" : "Not enough data to graph (need 2+ data points)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .padding()
@@ -237,8 +237,8 @@ struct BodyWeightExerciseChartView: View {
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.95))
             
-            if chartData.isEmpty {
-                Text("No data yet")
+            if chartData.count < 2 {
+                Text(chartData.isEmpty ? "No data yet" : "Not enough data to graph (need 2+ data points)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .padding()

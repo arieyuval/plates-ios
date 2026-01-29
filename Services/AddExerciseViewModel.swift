@@ -14,7 +14,8 @@ class AddExerciseViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published var exerciseName: String = ""
     @Published var exerciseType: ExerciseType = .strength
-    @Published var muscleGroup: MuscleGroup = .chest
+    @Published var muscleGroup: MuscleGroup = .chest // Primary muscle group
+    @Published var selectedMuscleGroups: Set<MuscleGroup> = [.chest] // All selected muscle groups
     @Published var defaultPRReps: Int? = 3
     @Published var usesBodyWeight: Bool = false
     
@@ -58,6 +59,11 @@ class AddExerciseViewModel: ObservableObject {
     var isValid: Bool {
         // Name is required
         guard !exerciseName.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return false
+        }
+        
+        // At least one muscle group must be selected for strength exercises
+        if exerciseType == .strength && selectedMuscleGroups.isEmpty {
             return false
         }
         
@@ -147,11 +153,34 @@ class AddExerciseViewModel: ObservableObject {
         
         if exercise.exerciseType == .strength {
             muscleGroup = exercise.muscleGroup
+            selectedMuscleGroups = Set(exercise.muscleGroups)
             defaultPRReps = exercise.defaultPRReps
             usesBodyWeight = exercise.usesBodyWeight
         }
         
         showSuggestions = false
+    }
+    
+    func toggleMuscleGroup(_ group: MuscleGroup) {
+        if selectedMuscleGroups.contains(group) {
+            selectedMuscleGroups.remove(group)
+            // If we removed the primary, set a new primary
+            if muscleGroup == group, let first = selectedMuscleGroups.first {
+                muscleGroup = first
+            }
+        } else {
+            selectedMuscleGroups.insert(group)
+            // If this is the first one, make it primary
+            if selectedMuscleGroups.count == 1 {
+                muscleGroup = group
+            }
+        }
+    }
+    
+    func setPrimaryMuscleGroup(_ group: MuscleGroup) {
+        muscleGroup = group
+        // Ensure it's also in the selected set
+        selectedMuscleGroups.insert(group)
     }
     
     func submit() async -> Bool {
@@ -161,10 +190,18 @@ class AddExerciseViewModel: ObservableObject {
         error = nil
         
         do {
+            // Convert selected muscle groups to array, ensuring primary is first
+            var muscleGroupsArray = Array(selectedMuscleGroups)
+            if let primaryIndex = muscleGroupsArray.firstIndex(of: muscleGroup) {
+                muscleGroupsArray.remove(at: primaryIndex)
+                muscleGroupsArray.insert(muscleGroup, at: 0)
+            }
+            
             // Step 1: Create/find exercise
             let exercise = try await supabase.addExercise(
                 name: exerciseName.trimmingCharacters(in: .whitespaces),
                 muscleGroup: exerciseType == .cardio ? .cardio : muscleGroup,
+                muscleGroups: exerciseType == .cardio ? [.cardio] : muscleGroupsArray,
                 exerciseType: exerciseType,
                 defaultPRReps: exerciseType == .strength ? (defaultPRReps ?? 3) : 1,
                 usesBodyWeight: exerciseType == .strength ? usesBodyWeight : false

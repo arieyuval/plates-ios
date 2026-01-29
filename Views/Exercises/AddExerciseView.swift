@@ -54,12 +54,32 @@ struct AddExerciseView: View {
                 // Strength-specific fields
                 if viewModel.exerciseType == .strength {
                     Section {
-                        Picker("Muscle Group", selection: $viewModel.muscleGroup) {
-                            ForEach(viewModel.strengthMuscleGroups, id: \.self) { group in
-                                Text(group.rawValue).tag(group)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Select Muscle Groups")
+                                .font(.subheadline)
+                                .foregroundStyle(.white.opacity(0.7))
+                            
+                            // Muscle group chips
+                            FlowLayout(spacing: 8) {
+                                ForEach(viewModel.strengthMuscleGroups, id: \.self) { group in
+                                    MuscleGroupChip(
+                                        group: group,
+                                        isSelected: viewModel.selectedMuscleGroups.contains(group),
+                                        isPrimary: viewModel.muscleGroup == group,
+                                        onTap: {
+                                            viewModel.toggleMuscleGroup(group)
+                                        },
+                                        onLongPress: {
+                                            viewModel.setPrimaryMuscleGroup(group)
+                                        }
+                                    )
+                                }
                             }
                         }
-                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.vertical, 4)
+                    } footer: {
+                        Text("Tap to select muscle groups. Long press to set as primary (shown under \"All\" tab).")
+                            .foregroundStyle(.white.opacity(0.5))
                     }
                     .listRowBackground(Color.statBoxDark)
                     
@@ -196,7 +216,8 @@ struct ExerciseSuggestionRow: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.white)
                 
-                Text(exercise.muscleGroup.rawValue)
+                // Show all muscle groups
+                Text(exercise.muscleGroups.map { $0.rawValue }.joined(separator: ", "))
                     .font(.caption)
                     .foregroundStyle(exercise.muscleGroup.color(for: colorScheme))
             }
@@ -211,3 +232,96 @@ struct ExerciseSuggestionRow: View {
         .padding(.vertical, 4)
     }
 }
+struct MuscleGroupChip: View {
+    let group: MuscleGroup
+    let isSelected: Bool
+    let isPrimary: Bool
+    let onTap: () -> Void
+    let onLongPress: () -> Void
+    
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(group.rawValue)
+                .font(.subheadline)
+                .fontWeight(isPrimary ? .bold : .medium)
+            
+            if isPrimary {
+                Image(systemName: "star.fill")
+                    .font(.caption2)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? group.color(for: colorScheme) : Color.white.opacity(0.1))
+        .foregroundStyle(isSelected ? .white : .white.opacity(0.7))
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(isPrimary ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 20))
+        .onTapGesture {
+            onTap()
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            onLongPress()
+        }
+    }
+}
+
+// Simple flow layout for wrapping chips
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = FlowResult(
+            in: proposal.replacingUnspecifiedDimensions().width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        return result.size
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = FlowResult(
+            in: bounds.width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + result.frames[index].minX, y: bounds.minY + result.frames[index].minY), proposal: .unspecified)
+        }
+    }
+    
+    struct FlowResult {
+        var frames: [CGRect] = []
+        var size: CGSize = .zero
+        
+        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
+            var currentX: CGFloat = 0
+            var currentY: CGFloat = 0
+            var lineHeight: CGFloat = 0
+            
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                
+                if currentX + size.width > maxWidth && currentX > 0 {
+                    // Move to next line
+                    currentX = 0
+                    currentY += lineHeight + spacing
+                    lineHeight = 0
+                }
+                
+                frames.append(CGRect(x: currentX, y: currentY, width: size.width, height: size.height))
+                lineHeight = max(lineHeight, size.height)
+                currentX += size.width + spacing
+            }
+            
+            self.size = CGSize(width: maxWidth, height: currentY + lineHeight)
+        }
+    }
+}
+
+

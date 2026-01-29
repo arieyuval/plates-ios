@@ -29,18 +29,21 @@ class ExerciseListViewModel: ObservableObject {
         // Filter by muscle group
         if selectedMuscleGroup != .all {
             if selectedMuscleGroup == .arms {
-                // When Arms is selected, include Arms, Biceps, and Triceps
-                result = result.filter { 
-                    $0.muscleGroup == .arms || 
-                    $0.muscleGroup == .biceps || 
-                    $0.muscleGroup == .triceps 
+                // When Arms is selected, include exercises that target Arms, Biceps, or Triceps
+                result = result.filter { exercise in
+                    exercise.muscleGroups.contains(.arms) ||
+                    exercise.muscleGroups.contains(.biceps) ||
+                    exercise.muscleGroups.contains(.triceps)
                 }
             } else {
-                result = result.filter { $0.muscleGroup == selectedMuscleGroup }
+                // Filter by exercises that include the selected muscle group
+                result = result.filter { exercise in
+                    exercise.muscleGroups.contains(selectedMuscleGroup)
+                }
             }
         }
         
-        // Filter by search text (searches both name and muscle group)
+        // Filter by search text (searches both name and muscle groups)
         if !searchText.isEmpty {
             result = result.filter { $0.matches(searchText: searchText) }
         }

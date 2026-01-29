@@ -184,6 +184,29 @@ class SupabaseManager: ObservableObject {
         try await client.from("user_profiles")
             .insert(profile)
             .execute()
+        
+        // If initial weight was provided, create a body weight log as the starting weigh-in
+        if let initialWeight = initialWeight {
+            struct BodyWeightLogInsert: Encodable {
+                let user_id: String
+                let weight: Double
+                let date: String
+                let notes: String?
+            }
+            
+            let logData = BodyWeightLogInsert(
+                user_id: userId.uuidString,
+                weight: initialWeight,
+                date: ISO8601DateFormatter().string(from: Date()),
+                notes: "Starting weight"
+            )
+            
+            try await client.from("body_weight_logs")
+                .insert(logData)
+                .execute()
+            
+            print("✅ Created initial body weight log: \(initialWeight) lbs")
+        }
     }
     
     func fetchUserProfile() async throws -> UserProfile? {
@@ -353,6 +376,7 @@ class SupabaseManager: ObservableObject {
     func addExercise(
         name: String,
         muscleGroup: MuscleGroup,
+        muscleGroups: [MuscleGroup],
         exerciseType: ExerciseType,
         defaultPRReps: Int,
         usesBodyWeight: Bool
@@ -363,39 +387,89 @@ class SupabaseManager: ObservableObject {
         
         print("🔍 Adding exercise for user: \(userId.uuidString)")
         
-        // Step 1: Check if exercise with same name and muscle group exists
+        // Step 1: Check if exercise with same name and primary muscle group exists
         let existingExercises: [Exercise] = try await client.from("exercises")
             .select()
             .eq("name", value: name)
-            .eq("muscle_group", value: muscleGroup.rawValue)
             .execute()
             .value
         
+        // Filter to find one with matching primary muscle group
+        let matchingExercise = existingExercises.first { $0.muscleGroup == muscleGroup }
+        
         let exercise: Exercise
         
-        if let existing = existingExercises.first {
-            // Exercise exists, use it
+        if let existing = matchingExercise {
+            // Exercise exists, update it with new muscle groups if needed
             print("✓ Exercise already exists: \(existing.name) (\(existing.id))")
-            exercise = existing
+            
+            // Update muscle groups if they've changed
+            if Set(existing.muscleGroups) != Set(muscleGroups) {
+                print("→ Updating muscle groups...")
+                
+                // Create the update data with proper encoding
+                struct MuscleGroupUpdate: Encodable {
+                    let muscle_group: AnyCodable
+                    
+                    init(muscleGroups: [MuscleGroup]) {
+                        if muscleGroups.count == 1 {
+                            // Single value
+                            self.muscle_group = AnyCodable(muscleGroups[0].rawValue)
+                        } else {
+                            // Array
+                            self.muscle_group = AnyCodable(muscleGroups.map { $0.rawValue })
+                        }
+                    }
+                }
+                
+                let updateData = MuscleGroupUpdate(muscleGroups: muscleGroups)
+                
+                exercise = try await client.from("exercises")
+                    .update(updateData)
+                    .eq("id", value: existing.id.uuidString)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                
+                print("✓ Muscle groups updated")
+            } else {
+                exercise = existing
+            }
         } else {
             // Create new exercise
             print("→ Creating new exercise: \(name)")
+            
             struct ExerciseInsert: Encodable {
                 let name: String
-                let muscle_group: String
+                let muscle_group: AnyCodable
                 let exercise_type: String
                 let is_base: Bool
                 let default_pr_reps: Int
                 let uses_body_weight: Bool
+                
+                init(name: String, muscleGroups: [MuscleGroup], exerciseType: ExerciseType, defaultPRReps: Int, usesBodyWeight: Bool) {
+                    self.name = name
+                    self.exercise_type = exerciseType.rawValue
+                    self.is_base = false
+                    self.default_pr_reps = defaultPRReps
+                    self.uses_body_weight = usesBodyWeight
+                    
+                    // Encode as single value if only one group, array if multiple
+                    if muscleGroups.count == 1 {
+                        self.muscle_group = AnyCodable(muscleGroups[0].rawValue)
+                    } else {
+                        self.muscle_group = AnyCodable(muscleGroups.map { $0.rawValue })
+                    }
+                }
             }
             
             let exerciseData = ExerciseInsert(
                 name: name,
-                muscle_group: muscleGroup.rawValue,
-                exercise_type: exerciseType.rawValue,
-                is_base: false,
-                default_pr_reps: defaultPRReps,
-                uses_body_weight: usesBodyWeight
+                muscleGroups: muscleGroups,
+                exerciseType: exerciseType,
+                defaultPRReps: defaultPRReps,
+                usesBodyWeight: usesBodyWeight
             )
             
             exercise = try await client.from("exercises")
@@ -437,6 +511,39 @@ class SupabaseManager: ObservableObject {
         
         return exercise
     }
+
+// Helper type for encoding dynamic values
+struct AnyCodable: Codable {
+    let value: Any
+    
+    init(_ value: Any) {
+        self.value = value
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        
+        if let string = value as? String {
+            try container.encode(string)
+        } else if let array = value as? [String] {
+            try container.encode(array)
+        } else {
+            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: [], debugDescription: "Unsupported type"))
+        }
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let string = try? container.decode(String.self) {
+            value = string
+        } else if let array = try? container.decode([String].self) {
+            value = array
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
+        }
+    }
+}
 
     
     func updatePinnedNote(exerciseId: UUID, note: String?) async throws {

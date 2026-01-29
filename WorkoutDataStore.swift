@@ -230,6 +230,7 @@ class WorkoutDataStore: ObservableObject {
     func addExercise(
         name: String,
         muscleGroup: MuscleGroup,
+        muscleGroups: [MuscleGroup],
         exerciseType: ExerciseType,
         defaultPRReps: Int,
         usesBodyWeight: Bool
@@ -237,6 +238,7 @@ class WorkoutDataStore: ObservableObject {
         let exercise = try await supabase.addExercise(
             name: name,
             muscleGroup: muscleGroup,
+            muscleGroups: muscleGroups,
             exerciseType: exerciseType,
             defaultPRReps: defaultPRReps,
             usesBodyWeight: usesBodyWeight
@@ -280,5 +282,27 @@ class WorkoutDataStore: ObservableObject {
         if isStale {
             await fetchAllData(force: false)
         }
+    }
+    
+    // MARK: - Body Weight Management
+    
+    /// Log body weight and update user profile
+    func logBodyWeight(weight: Double, date: Date, notes: String?) async throws {
+        try await supabase.logBodyWeight(weight: weight, date: date, notes: notes)
+    }
+    
+    /// Update body weight log
+    func updateBodyWeightLog(_ logId: UUID, weight: Double, date: Date, notes: String?) async throws {
+        try await supabase.updateBodyWeightLog(logId, weight: weight, date: date, notes: notes)
+    }
+    
+    /// Delete body weight log
+    func deleteBodyWeightLog(_ logId: UUID) async throws {
+        try await supabase.deleteBodyWeightLog(logId)
+    }
+    
+    /// Update goal weight in user profile
+    func updateGoalWeight(_ goalWeight: Double?) async throws {
+        try await supabase.updateGoalWeight(goalWeight)
     }
 }

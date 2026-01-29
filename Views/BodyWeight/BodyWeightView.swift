@@ -230,8 +230,8 @@ struct BodyWeightChartView: View {
                 .font(.headline)
                 .foregroundStyle(.white.opacity(0.95))
             
-            if chartData.isEmpty {
-                Text("No weight logs yet")
+            if chartData.count < 2 {
+                Text(chartData.isEmpty ? "No weight logs yet" : "Not enough data to graph (need 2+ data points)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .padding()
